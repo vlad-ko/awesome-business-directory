@@ -4,18 +4,36 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Business;
-use Illuminate\Support\Facades\Log;
+use App\Services\BusinessLogger;
+use Illuminate\Support\Facades\Validator;
 
 class BusinessOnboardingController extends Controller
 {
-    public function create()
+    public function create(Request $request)
     {
+        // Log that someone started the onboarding process
+        BusinessLogger::onboardingStarted($request);
+
         return view('onboarding.create');
     }
 
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
+        $startTime = microtime(true);
+
+        // Start custom transaction for business onboarding
+        $transaction = BusinessLogger::startBusinessTransaction('onboarding', [
+            'industry' => $request->input('industry'),
+            'business_type' => $request->input('business_type'),
+        ]);
+
+        // Create validation span
+        $validationSpan = BusinessLogger::createBusinessSpan('validation', [
+            'fields_count' => count($request->all()),
+        ]);
+
+        // Validate the request data
+        $validator = Validator::make($request->all(), [
             'business_name' => 'required|string|max:255',
             'industry' => 'required|string',
             'description' => 'required|string',
@@ -31,16 +49,79 @@ class BusinessOnboardingController extends Controller
             'business_type' => 'required|string',
         ]);
 
-        Log::info('Creating business', $validatedData);
+        $validationSpan?->finish();
 
-        $business = Business::create($validatedData);
+        // Log validation failures with structured data
+        if ($validator->fails()) {
+            $transaction?->setData([
+                'validation_status' => 'failed',
+                'error_count' => count($validator->errors())
+            ]);
+            BusinessLogger::validationFailed($validator->errors()->toArray(), $request);
+            $transaction?->finish();
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
 
-        Log::info('Business created', [
-            'id' => $business->id,
-            'business_name' => $business->business_name,
-            'business_slug' => $business->business_slug,
-        ]);
+        $transaction?->setData(['validation_status' => 'passed']);
+        $validatedData = $validator->validated();
 
-        return redirect()->route('business.onboard')->with('success', 'Business submitted for review!');
+        try {
+            // Create database span for business creation
+            $dbSpan = BusinessLogger::createDatabaseSpan('business_create', 'Creating new business record');
+            
+            // Create the business
+            $business = Business::create($validatedData);
+            
+            $dbSpan?->setData(['business_id' => $business->id]);
+            $dbSpan?->finish();
+
+            // Calculate processing time
+            $processingTime = (microtime(true) - $startTime) * 1000;
+
+            // Set transaction success data
+            $transaction?->setData([
+                'status' => 'success',
+                'business_id' => $business->id,
+                'processing_time_ms' => round($processingTime, 2)
+            ]);
+
+            // Log successful business creation with structured data
+            BusinessLogger::businessCreated($business, $processingTime);
+
+            // Log performance metric
+            BusinessLogger::performanceMetric('business_creation', $processingTime, [
+                'business_id' => $business->id,
+                'industry' => $business->industry,
+            ]);
+
+            // Log user interaction
+            BusinessLogger::userInteraction('business_submitted', [
+                'business_id' => $business->id,
+                'business_name' => $business->business_name,
+            ]);
+
+            $transaction?->finish();
+            return redirect()->route('business.onboard')->with('success', 'Business submitted for review!');
+
+        } catch (\Exception $e) {
+            // Set transaction error data
+            $transaction?->setData([
+                'status' => 'error',
+                'error_type' => get_class($e)
+            ]);
+            
+            // Log any errors that occur during business creation
+            BusinessLogger::applicationError($e, 'business_creation_failed', [
+                'input_data' => $validatedData,
+                'processing_time_ms' => (microtime(true) - $startTime) * 1000,
+            ]);
+
+            $transaction?->finish();
+            return redirect()->back()
+                ->with('error', 'Something went wrong. Please try again.')
+                ->withInput();
+        }
     }
 }

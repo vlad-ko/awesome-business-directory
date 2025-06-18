@@ -7,12 +7,13 @@ use App\Models\Business;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Log;
+use PHPUnit\Framework\Attributes\Test;
 
 class BusinessOnboardingTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
 
-    /** @test */
+    #[Test]
     public function user_can_view_business_onboarding_form()
     {
         $response = $this->get(route('business.onboard'));
@@ -24,7 +25,7 @@ class BusinessOnboardingTest extends TestCase
             ->assertSee('Industry');
     }
 
-    /** @test */
+    #[Test]
     public function user_can_submit_business_for_onboarding()
     {
         $businessData = [
@@ -55,7 +56,7 @@ class BusinessOnboardingTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function business_requires_required_fields()
     {
         $response = $this->post(route('business.store'), []);
@@ -77,7 +78,7 @@ class BusinessOnboardingTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function business_email_must_be_valid()
     {
         $businessData = [
@@ -104,7 +105,7 @@ class BusinessOnboardingTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function business_is_created_with_pending_status()
     {
         $businessData = [
@@ -131,7 +132,7 @@ class BusinessOnboardingTest extends TestCase
         $this->assertNull($business->verified_at);
     }
 
-    /** @test */
+    #[Test]
     public function business_slug_is_automatically_generated()
     {
         $businessData = [
@@ -156,7 +157,7 @@ class BusinessOnboardingTest extends TestCase
         $this->assertEquals('test-company-llc', $business->business_slug);
     }
 
-    /** @test */
+    #[Test]
     public function business_slug_must_be_unique()
     {
         // Create first business
@@ -183,11 +184,14 @@ class BusinessOnboardingTest extends TestCase
         $business1 = Business::first();
         $this->assertEquals('test-company', $business1->business_slug);
 
-        // Create second business with same name
+        // Create second business with same name but different emails
+        $businessData['primary_email'] = $this->faker->unique()->email;
+        $businessData['owner_email'] = $this->faker->unique()->email;
+        
         $response2 = $this->post(route('business.store'), $businessData);
         $response2->assertSessionDoesntHaveErrors();
 
-        $business2 = Business::latest()->first();
+        $business2 = Business::orderBy('id', 'desc')->first();
         
         // Should have a different slug
         $this->assertNotEquals($business1->business_slug, $business2->business_slug);

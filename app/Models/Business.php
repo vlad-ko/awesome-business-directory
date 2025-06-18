@@ -62,25 +62,13 @@ class Business extends Model
         parent::boot();
 
         static::creating(function ($business) {
-            $baseSlug = Str::slug($business->business_name);
-            $slug = $baseSlug;
-            $counter = 1;
-
-            // Get all existing slugs that start with the base slug
-            $existingSlugs = static::where('business_slug', 'LIKE', $baseSlug . '%')
-                ->pluck('business_slug')
-                ->toArray();
-
-            // If there are existing slugs, find the next available number
-            if (!empty($existingSlugs)) {
-                while (in_array($slug, $existingSlugs)) {
-                    $counter++;
-                    $slug = $baseSlug . '-' . $counter;
-                }
+            // Generate unique slug
+            $business->business_slug = static::generateUniqueSlug($business->business_name);
+            
+            // Only set status to pending if not already set
+            if (empty($business->status)) {
+                $business->status = 'pending';
             }
-
-            $business->business_slug = $slug;
-            $business->status = 'pending';
         });
     }
 
@@ -88,13 +76,30 @@ class Business extends Model
     {
         $originalSlug = Str::slug($name);
         $slug = $originalSlug;
-        $count = 1;
-
+        $count = 2; // Start from 2 for the second occurrence
+        
+        // Check if the original slug exists
         while (static::where('business_slug', $slug)->exists()) {
-            $count++;
             $slug = $originalSlug . '-' . $count;
+            $count++;
         }
 
         return $slug;
+    }
+
+    /**
+     * Scope a query to only include approved businesses.
+     */
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved');
+    }
+
+    /**
+     * Scope a query to order businesses by featured first, then alphabetically.
+     */
+    public function scopeOrderedForListing($query)
+    {
+        return $query->orderByDesc('is_featured')->orderBy('business_name');
     }
 }
