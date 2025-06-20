@@ -554,15 +554,17 @@ Key features:
 
 ### 📊 Sentry Logs Integration (Beta)
 
-**Advanced Centralized Logging**: Our application now features Sentry Logs integration, providing unified log management alongside error tracking and performance monitoring.
+**Important Note**: Sentry Logs is currently in Open Beta and the Laravel SDK (v4.15.0) doesn't yet support the new Logs tab feature. Our logs currently appear in Sentry's **Issues tab** using traditional event capture, but provide the same structured data and filtering capabilities.
+
+**Advanced Centralized Logging**: Our application features comprehensive Sentry integration with structured logging, providing unified monitoring alongside error tracking and performance monitoring.
 
 #### Key Benefits
 
-- **Unified Dashboard**: View logs, errors, and performance data in a single Sentry interface
+- **Unified Dashboard**: View logs (as Issues), errors, and performance data in a single Sentry interface
 - **Rich Context**: Every log entry includes user session, performance metrics, and business context
-- **Advanced Filtering**: Tag-based organization enables powerful searching and filtering
+- **Advanced Filtering**: Tag-based organization enables powerful searching and filtering in Issues tab
 - **Performance Correlation**: Link log events directly to transaction performance data
-- **Real-time Monitoring**: Stream logs in real-time with automatic alerting for critical events
+- **Intelligent Alerting**: Critical events trigger immediate notifications in Issues tab
 
 #### Enhanced Logging Capabilities
 

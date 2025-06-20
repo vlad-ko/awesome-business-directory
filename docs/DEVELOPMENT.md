@@ -982,6 +982,16 @@ BusinessLogger::businessInsight('conversion_rate_analysis', [
 - ✅ Business intelligence integration for data-driven decisions
 - ✅ Enhanced debugging with rich contextual information
 
+**Important Discovery: Laravel SDK Limitations**
+During implementation, we discovered that Sentry Logs is still in **Open Beta** and the Laravel SDK (v4.15.0) doesn't yet support the new Sentry Logs tab feature. Our logs appear in the **Issues tab** using traditional event capture, which still provides:
+- ✅ Full structured data with tags and context
+- ✅ Advanced filtering and searching capabilities  
+- ✅ Performance correlation with traces and spans
+- ✅ Automatic alerting for critical events
+- ✅ Business intelligence through structured queries
+
+This implementation is **forward-compatible** and will automatically benefit from enhanced Logs tab features when Laravel SDK support arrives.
+
 ## 🔮 Future Enhancements
 
 ### Planned Features

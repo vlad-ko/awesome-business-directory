@@ -835,9 +835,24 @@ $transaction?->setData([
 
 ## Sentry Logs Integration
 
-### Understanding Sentry Logs vs Traditional Logging
+### Current Status: Laravel SDK Limitations
 
-Sentry Logs (currently in Beta) represents a paradigm shift from traditional application logging by providing centralized, structured, and contextually-rich log management directly within the Sentry ecosystem.
+**Important Note**: Sentry Logs is currently in **Open Beta** and the Laravel SDK (v4.15.0) does not yet fully support the new Sentry Logs Beta feature. The PHP/Laravel SDK support is listed as "coming next" in Sentry's roadmap.
+
+**What this means:**
+- Logs sent via our `BusinessLogger` and log channels appear in Sentry's **Issues tab**, not the **Logs tab**
+- This is the traditional Sentry behavior where logs are treated as events/issues
+- The functionality is still valuable for debugging and monitoring, just organized differently
+
+**Current Behavior:**
+- `info` level logs → Sentry Issues (if log level allows)
+- `warning` level logs → Sentry Issues  
+- `error` level logs → Sentry Issues
+- All logs include structured data, tags, and context for powerful filtering
+
+### Understanding Current Implementation vs Future Sentry Logs
+
+Our current implementation provides structured logging within Sentry's traditional event system, preparing for future migration to true Sentry Logs when Laravel SDK support arrives.
 
 #### Traditional Laravel Logging Limitations
 ```php
@@ -886,16 +901,16 @@ BusinessLogger::logToSentry(
 ```php
 // config/logging.php
 'channels' => [
-    'sentry' => [
-        'driver' => 'sentry',
+'sentry' => [
+    'driver' => 'sentry',
         'level' => env('LOG_LEVEL', 'info'),
-        'bubble' => true,
-        'name' => 'business-directory',
-    ],
-    
-    'structured' => [
-        'driver' => 'stack',
-        'channels' => ['single', 'sentry'],
+    'bubble' => true,
+    'name' => 'business-directory',
+],
+
+'structured' => [
+    'driver' => 'stack',
+    'channels' => ['single', 'sentry'],
         'name' => 'structured-logs',
     ],
 ],

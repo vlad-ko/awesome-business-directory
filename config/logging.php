@@ -129,7 +129,7 @@ return [
 
         'sentry' => [
             'driver' => 'sentry',
-            'level' => env('LOG_LEVEL', 'info'),
+            'level' => 'warning',
             'bubble' => true,
             'name' => 'business-directory',
         ],
