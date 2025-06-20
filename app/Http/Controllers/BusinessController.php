@@ -99,7 +99,66 @@ class BusinessController extends Controller
      */
     public function show(Business $business)
     {
-        //
+        $startTime = microtime(true);
+
+        // Start custom transaction for business detail view
+        $transaction = BusinessLogger::startBusinessTransaction('business_detail', [
+            'business_id' => $business->id,
+            'business_slug' => $business->business_slug,
+        ]);
+
+        // Log business detail access attempt
+        BusinessLogger::userInteraction('business_detail_access_attempt', [
+            'business_id' => $business->id,
+            'business_slug' => $business->business_slug,
+            'business_name' => $business->business_name,
+            'business_status' => $business->status,
+            'request_url' => request()->url(),
+            'user_ip' => request()->ip(),
+        ]);
+
+        // Only show approved businesses to the public
+        if ($business->status !== 'approved') {
+            BusinessLogger::userInteraction('business_detail_access_denied', [
+                'business_id' => $business->id,
+                'business_slug' => $business->business_slug,
+                'business_status' => $business->status,
+                'reason' => 'not_approved',
+            ]);
+            abort(404);
+        }
+
+        // Create span for business logic
+        $logicSpan = BusinessLogger::createBusinessSpan('business_detail_view', [
+            'business_id' => $business->id,
+            'business_name' => $business->business_name,
+            'industry' => $business->industry,
+        ]);
+
+        $responseTime = (microtime(true) - $startTime) * 1000;
+
+        // Set transaction data
+        $transaction?->setData([
+            'business_id' => $business->id,
+            'business_name' => $business->business_name,
+            'industry' => $business->industry,
+            'is_featured' => $business->is_featured,
+            'is_verified' => $business->is_verified,
+            'response_time_ms' => round($responseTime, 2),
+        ]);
+
+        // Log business detail view
+        BusinessLogger::userInteraction('business_detail_viewed', [
+            'business_id' => $business->id,
+            'business_name' => $business->business_name,
+            'business_slug' => $business->business_slug,
+            'industry' => $business->industry,
+        ]);
+
+        $logicSpan?->finish();
+        $transaction?->finish();
+
+        return view('businesses.show', compact('business'));
     }
 
     /**

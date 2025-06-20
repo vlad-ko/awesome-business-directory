@@ -60,7 +60,7 @@ class AdminBusinessManagementTest extends TestCase
         $business = Business::factory()->create(['status' => 'pending']);
 
         $response = $this->actingAs($this->admin)
-            ->patch(route('admin.businesses.approve', $business->id));
+            ->patch(route('admin.businesses.approve', $business->business_slug));
 
         $response->assertRedirect(route('admin.dashboard'))
             ->assertSessionHas('success', 'Business approved successfully!');
@@ -77,7 +77,7 @@ class AdminBusinessManagementTest extends TestCase
         $business = Business::factory()->create(['status' => 'pending']);
 
         $response = $this->actingAs($this->admin)
-            ->patch(route('admin.businesses.reject', $business->id), [
+            ->patch(route('admin.businesses.reject', $business->business_slug), [
                 'rejection_reason' => 'Incomplete information provided',
             ]);
 
@@ -100,7 +100,7 @@ class AdminBusinessManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)
-            ->get(route('admin.businesses.show', $business->id));
+            ->get(route('admin.businesses.show', $business->business_slug));
 
         $response->assertStatus(200)
             ->assertViewIs('admin.businesses.show')
@@ -116,7 +116,7 @@ class AdminBusinessManagementTest extends TestCase
         $business = Business::factory()->create(['status' => 'approved']);
 
         $response = $this->actingAs($this->admin)
-            ->patch(route('admin.businesses.approve', $business->id));
+            ->patch(route('admin.businesses.approve', $business->business_slug));
 
         $response->assertRedirect(route('admin.dashboard'))
             ->assertSessionHas('error', 'Business is not pending approval.');
@@ -128,7 +128,7 @@ class AdminBusinessManagementTest extends TestCase
         $business = Business::factory()->create(['status' => 'approved']);
 
         $response = $this->actingAs($this->admin)
-            ->patch(route('admin.businesses.reject', $business->id), [
+            ->patch(route('admin.businesses.reject', $business->business_slug), [
                 'rejection_reason' => 'Test reason',
             ]);
 
@@ -142,7 +142,7 @@ class AdminBusinessManagementTest extends TestCase
         $business = Business::factory()->create(['status' => 'pending']);
 
         $response = $this->actingAs($this->admin)
-            ->patch(route('admin.businesses.reject', $business->id), []);
+            ->patch(route('admin.businesses.reject', $business->business_slug), []);
 
         $response->assertRedirect()
             ->assertSessionHasErrors(['rejection_reason']);
@@ -162,7 +162,7 @@ class AdminBusinessManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)
-            ->patch(route('admin.businesses.toggle-featured', $business->id));
+            ->patch(route('admin.businesses.toggle-featured', $business->business_slug));
 
         $response->assertRedirect()
             ->assertSessionHas('success', 'Featured status updated successfully!');
@@ -182,7 +182,7 @@ class AdminBusinessManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)
-            ->patch(route('admin.businesses.toggle-verified', $business->id));
+            ->patch(route('admin.businesses.toggle-verified', $business->business_slug));
 
         $response->assertRedirect()
             ->assertSessionHas('success', 'Verified status updated successfully!');
@@ -205,11 +205,11 @@ class AdminBusinessManagementTest extends TestCase
 
         $routes = [
             ['GET', route('admin.dashboard')],
-            ['GET', route('admin.businesses.show', $business->id)],
-            ['PATCH', route('admin.businesses.approve', $business->id)],
-            ['PATCH', route('admin.businesses.reject', $business->id)],
-            ['PATCH', route('admin.businesses.toggle-featured', $business->id)],
-            ['PATCH', route('admin.businesses.toggle-verified', $business->id)],
+            ['GET', route('admin.businesses.show', $business->business_slug)],
+            ['PATCH', route('admin.businesses.approve', $business->business_slug)],
+            ['PATCH', route('admin.businesses.reject', $business->business_slug)],
+            ['PATCH', route('admin.businesses.toggle-featured', $business->business_slug)],
+            ['PATCH', route('admin.businesses.toggle-verified', $business->business_slug)],
         ];
 
         foreach ($routes as [$method, $route]) {
@@ -226,11 +226,11 @@ class AdminBusinessManagementTest extends TestCase
 
         $routes = [
             ['GET', route('admin.dashboard')],
-            ['GET', route('admin.businesses.show', $business->id)],
-            ['PATCH', route('admin.businesses.approve', $business->id)],
-            ['PATCH', route('admin.businesses.reject', $business->id)],
-            ['PATCH', route('admin.businesses.toggle-featured', $business->id)],
-            ['PATCH', route('admin.businesses.toggle-verified', $business->id)],
+            ['GET', route('admin.businesses.show', $business->business_slug)],
+            ['PATCH', route('admin.businesses.approve', $business->business_slug)],
+            ['PATCH', route('admin.businesses.reject', $business->business_slug)],
+            ['PATCH', route('admin.businesses.toggle-featured', $business->business_slug)],
+            ['PATCH', route('admin.businesses.toggle-verified', $business->business_slug)],
         ];
 
         foreach ($routes as [$method, $route]) {

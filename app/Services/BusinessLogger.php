@@ -13,6 +13,7 @@ use function Sentry\configureScope;
 use function Sentry\startTransaction;
 use Sentry\SentrySdk;
 use Sentry\Tracing\TransactionContext;
+use Sentry\Tracing\SpanContext;
 use Sentry\Severity;
 
 class BusinessLogger
@@ -226,11 +227,11 @@ class BusinessLogger
             return null;
         }
 
-        $span = $transaction->startChild([
-            'op' => 'db.query',
-            'description' => $description ?: "Database: {$operation}",
-        ]);
+        $spanContext = new SpanContext();
+        $spanContext->setOp('db.query');
+        $spanContext->setDescription($description ?: "Database: {$operation}");
         
+        $span = $transaction->startChild($spanContext);
         $span->setData(['db.operation' => $operation]);
         
         return $span;
@@ -246,11 +247,11 @@ class BusinessLogger
             return null;
         }
 
-        $span = $transaction->startChild([
-            'op' => 'http.client',
-            'description' => "External API: {$service} - {$operation}",
-        ]);
+        $spanContext = new SpanContext();
+        $spanContext->setOp('http.client');
+        $spanContext->setDescription("External API: {$service} - {$operation}");
         
+        $span = $transaction->startChild($spanContext);
         $span->setData([
             'external.service' => $service,
             'external.operation' => $operation
@@ -269,11 +270,11 @@ class BusinessLogger
             return null;
         }
 
-        $span = $transaction->startChild([
-            'op' => 'business.logic',
-            'description' => "Business Logic: {$operation}",
-        ]);
+        $spanContext = new SpanContext();
+        $spanContext->setOp('business.logic');
+        $spanContext->setDescription("Business Logic: {$operation}");
         
+        $span = $transaction->startChild($spanContext);
         $span->setData([
             'business.operation' => $operation,
             ...$metadata

@@ -19,11 +19,15 @@
 
 ### Testing
 ```bash
-# Run all tests
+# Run all tests (45 tests, 202 assertions - all passing ✅)
 ./vendor/bin/sail artisan test
 
-# Run specific test file
+# Run specific test files
+./vendor/bin/sail artisan test tests/Feature/BusinessOnboardingTest.php
 ./vendor/bin/sail artisan test tests/Feature/BusinessListingTest.php
+./vendor/bin/sail artisan test tests/Feature/BusinessDetailPageTest.php
+./vendor/bin/sail artisan test tests/Feature/AdminAuthTest.php
+./vendor/bin/sail artisan test tests/Feature/AdminBusinessManagementTest.php
 
 # Run tests with coverage
 ./vendor/bin/sail artisan test --coverage
@@ -31,9 +35,8 @@
 # Run specific test method
 ./vendor/bin/sail artisan test --filter=user_can_view_business_listing_page
 
-# Run admin tests
-./vendor/bin/sail artisan test tests/Feature/AdminAuthTest.php
-./vendor/bin/sail artisan test tests/Feature/AdminBusinessManagementTest.php
+# Run all admin-related tests
+./vendor/bin/sail artisan test --filter=Admin
 ```
 
 ### Database Operations
@@ -102,9 +105,28 @@
 # Create admin user
 ./vendor/bin/sail artisan db:seed --class=AdminUserSeeder
 
+# Create admin user manually
+./vendor/bin/sail artisan tinker
+# Then run: User::factory()->create(['is_admin' => true, 'email' => 'admin@example.com']);
+
 # Setup business onboarding command (if available)
 ./vendor/bin/sail artisan setup:business-onboarding
 ```
+
+## 🔐 Admin Access
+
+### Default Admin Login
+After running the admin seeder:
+- **URL**: http://localhost/admin/login
+- **Email**: admin@example.com
+- **Password**: password
+
+### Admin Features
+- **Dashboard**: View pending businesses and statistics
+- **Business Review**: Detailed business information for approval
+- **Approval Workflow**: Approve/reject pending businesses
+- **Status Management**: Toggle featured and verified status
+- **Role Protection**: Admin-only access with middleware
 
 ## 🐛 Quick Troubleshooting
 

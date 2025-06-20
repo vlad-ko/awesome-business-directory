@@ -102,4 +102,12 @@ class Business extends Model
     {
         return $query->orderByDesc('is_featured')->orderBy('business_name');
     }
+
+    /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName()
+    {
+        return 'business_slug';
+    }
 }
