@@ -361,4 +361,152 @@ class BusinessLogger
             'session_id' => session()->getId(),
         ]);
     }
+
+    /**
+     * Log welcome page views and user engagement
+     */
+    public static function welcomePageViewed(Request $request, float $responseTimeMs = null): void
+    {
+        $data = [
+            'event' => 'welcome_page_viewed',
+            'timestamp' => now()->toISOString(),
+            'session_id' => session()->getId(),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'referrer' => $request->header('referer'),
+            'response_time_ms' => $responseTimeMs,
+        ];
+
+        Log::info("Welcome page viewed", $data);
+
+        // Add Sentry breadcrumb for user journey tracking
+        addBreadcrumb(
+            category: 'page.view',
+            message: 'Welcome page viewed',
+            metadata: [
+                'referrer' => $request->header('referer'),
+                'response_time_ms' => $responseTimeMs,
+            ]
+        );
+
+        // Set Sentry context for welcome page analytics
+        configureScope(function (Scope $scope) use ($request, $responseTimeMs): void {
+            $scope->setUser([
+                'ip_address' => $request->ip(),
+                'session_id' => session()->getId(),
+            ]);
+            $scope->setTag('page', 'welcome');
+            $scope->setTag('feature', 'homepage');
+            $scope->setContext('page_performance', [
+                'response_time_ms' => $responseTimeMs,
+                'referrer' => $request->header('referer'),
+            ]);
+        });
+    }
+
+    /**
+     * Log welcome page CTA (Call-to-Action) clicks
+     */
+    public static function welcomeCtaClicked(string $ctaType, Request $request): void
+    {
+        $data = [
+            'event' => 'welcome_cta_clicked', 
+            'timestamp' => now()->toISOString(),
+            'cta_type' => $ctaType, // 'explore_businesses', 'list_business', 'nav_browse', 'nav_join'
+            'session_id' => session()->getId(),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ];
+
+        Log::info("Welcome page CTA clicked", $data);
+
+        // Add Sentry breadcrumb for conversion tracking
+        addBreadcrumb(
+            category: 'user.conversion',
+            message: "Welcome CTA clicked: {$ctaType}",
+            metadata: [
+                'cta_type' => $ctaType,
+                'conversion_step' => 'homepage_to_action',
+            ]
+        );
+
+        // Set conversion context for funnel analysis
+        configureScope(function (Scope $scope) use ($ctaType): void {
+            $scope->setTag('conversion_action', $ctaType);
+            $scope->setTag('funnel_step', 'homepage_cta');
+            $scope->setContext('conversion', [
+                'source_page' => 'welcome',
+                'action_type' => $ctaType,
+                'timestamp' => now()->toISOString(),
+            ]);
+        });
+    }
+
+    /**
+     * Log SVG rendering performance and issues
+     */
+    public static function svgRenderingMetrics(float $renderTimeMs = null, array $svgData = []): void
+    {
+        $data = [
+            'event' => 'svg_rendering_tracked',
+            'timestamp' => now()->toISOString(),
+            'render_time_ms' => $renderTimeMs,
+            'svg_elements' => $svgData['element_count'] ?? null,
+            'svg_size' => $svgData['size_bytes'] ?? null,
+            'viewport_width' => $svgData['viewport_width'] ?? null,
+        ];
+
+        Log::info("SVG rendering metrics", $data);
+
+        // Track SVG performance for optimization
+        if ($renderTimeMs && $renderTimeMs > 100) {
+            Log::warning("Slow SVG rendering detected", [
+                'render_time_ms' => $renderTimeMs,
+                'performance_impact' => 'high',
+            ]);
+        }
+
+        // Add performance breadcrumb
+        addBreadcrumb(
+            category: 'performance.rendering',
+            message: 'SVG neighborhood illustration rendered',
+            metadata: [
+                'render_time_ms' => $renderTimeMs,
+                'performance_grade' => self::getPerformanceGrade($renderTimeMs ?? 0),
+            ]
+        );
+    }
+
+    /**
+     * Track user engagement with welcome page features
+     */
+    public static function welcomeEngagement(string $engagementType, array $metadata = []): void
+    {
+        $data = [
+            'event' => 'welcome_engagement',
+            'timestamp' => now()->toISOString(),
+            'engagement_type' => $engagementType, // 'scroll_to_features', 'hover_cta', 'view_svg', etc.
+            'session_id' => session()->getId(),
+            'metadata' => $metadata,
+        ];
+
+        Log::info("Welcome page engagement", $data);
+
+        // Track engagement for UX optimization
+        addBreadcrumb(
+            category: 'user.engagement',
+            message: "Welcome engagement: {$engagementType}",
+            metadata: $metadata
+        );
+
+        // Set engagement context
+        configureScope(function (Scope $scope) use ($engagementType, $metadata): void {
+            $scope->setTag('engagement_type', $engagementType);
+            $scope->setContext('engagement', [
+                'type' => $engagementType,
+                'metadata' => $metadata,
+                'page' => 'welcome',
+            ]);
+        });
+    }
 } 

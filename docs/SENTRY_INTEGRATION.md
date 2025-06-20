@@ -1211,6 +1211,208 @@ php artisan tinker
 >>> echo "Transaction sent to Sentry";
 ```
 
+## Welcome Page Instrumentation
+
+### Overview
+
+The welcome page serves as the primary entry point for users and is critical for conversion tracking. Our Sentry instrumentation captures comprehensive analytics about user behavior, performance, and conversion funnels.
+
+### Key Metrics Tracked
+
+#### 1. Page Views & Performance
+```php
+// Automatic tracking in routes/web.php
+BusinessLogger::welcomePageViewed($request, $responseTime);
+BusinessLogger::performanceMetric('welcome_page_render', $responseTime);
+```
+
+**What we track:**
+- Page load times and rendering performance
+- Referrer information for traffic source analysis
+- User agent data for device/browser analytics
+- Session tracking for user journey mapping
+
+#### 2. Call-to-Action (CTA) Conversion Tracking
+```php
+// Tracked when users click from welcome page to other sections
+BusinessLogger::welcomeCtaClicked('explore_businesses', $request);
+BusinessLogger::welcomeCtaClicked('list_business', $request);
+```
+
+**CTA Types Tracked:**
+- `explore_businesses` - Main CTA to browse businesses
+- `list_business` - Secondary CTA to add business
+- `nav_browse` - Navigation link to businesses
+- `nav_join` - Navigation link to onboarding
+
+#### 3. SVG Rendering Performance
+```php
+// Track performance of the neighborhood SVG illustration
+BusinessLogger::svgRenderingMetrics($renderTime, [
+    'element_count' => 150,
+    'size_bytes' => 25000,
+    'viewport_width' => 1200
+]);
+```
+
+**Why this matters:**
+- The SVG is complex (150+ elements) and can impact page performance
+- Tracks rendering time across different devices/browsers
+- Identifies when SVG becomes a performance bottleneck
+
+#### 4. User Engagement Tracking
+```php
+// Track user interactions with welcome page features
+BusinessLogger::welcomeEngagement('scroll_to_features', [
+    'scroll_depth' => 75,
+    'time_on_page' => 45
+]);
+```
+
+**Engagement Types:**
+- `scroll_to_features` - User scrolled to features section
+- `hover_cta` - User hovered over call-to-action buttons
+- `view_svg` - User viewed the SVG illustration
+- `feature_card_hover` - User interacted with feature cards
+
+### Sentry Dashboard Configuration
+
+#### Custom Dashboards for Welcome Page
+
+**1. Welcome Page Performance Dashboard**
+```javascript
+// Sentry Dashboard Query Examples
+{
+  "query": "event.type:transaction transaction:business.welcome_page_view",
+  "metrics": [
+    "avg(measurements.response_time_ms)",
+    "p95(measurements.response_time_ms)",
+    "count()"
+  ]
+}
+```
+
+**2. Conversion Funnel Dashboard**
+```javascript
+{
+  "query": "event.contexts.conversion.source_page:welcome",
+  "groupBy": "event.contexts.conversion.action_type",
+  "metrics": ["count()"]
+}
+```
+
+**3. SVG Performance Monitoring**
+```javascript
+{
+  "query": "event.breadcrumbs.category:performance.rendering",
+  "metrics": [
+    "avg(event.breadcrumbs.data.render_time_ms)",
+    "count_if(event.breadcrumbs.data.render_time_ms, greater, 100)"
+  ]
+}
+```
+
+### Alert Configuration
+
+#### Performance Alerts
+```php
+// Alert when welcome page is slow
+if ($responseTime > 1000) {
+    BusinessLogger::applicationError(
+        new \Exception("Welcome page slow load: {$responseTime}ms"),
+        'welcome_performance_degradation',
+        ['response_time_ms' => $responseTime]
+    );
+}
+```
+
+#### Conversion Rate Alerts
+```php
+// Alert when conversion rates drop
+$conversionRate = $ctaClicks / $pageViews;
+if ($conversionRate < 0.1) { // Less than 10%
+    BusinessLogger::applicationError(
+        new \Exception("Low welcome page conversion rate: {$conversionRate}"),
+        'welcome_conversion_rate_low',
+        ['conversion_rate' => $conversionRate]
+    );
+}
+```
+
+### Business Intelligence Integration
+
+#### Key Questions Our Instrumentation Answers
+
+1. **User Journey Analysis**
+   - Where do users come from before reaching our welcome page?
+   - Which CTAs are most effective?
+   - What's the conversion rate from welcome page to business listing?
+
+2. **Performance Optimization**
+   - Is the SVG illustration causing performance issues?
+   - How does page load time affect conversion rates?
+   - Which devices/browsers have the best performance?
+
+3. **Content Effectiveness**
+   - Do users engage with the features section?
+   - How long do users spend on the welcome page?
+   - Which visual elements get the most attention?
+
+#### Sample Queries for Analysis
+
+**Conversion Rate by Traffic Source:**
+```sql
+SELECT 
+    referrer_domain,
+    COUNT(*) as page_views,
+    COUNT(CASE WHEN event = 'welcome_cta_clicked' THEN 1 END) as cta_clicks,
+    (cta_clicks * 100.0 / page_views) as conversion_rate
+FROM sentry_events 
+WHERE event IN ('welcome_page_viewed', 'welcome_cta_clicked')
+GROUP BY referrer_domain
+ORDER BY conversion_rate DESC;
+```
+
+**Performance Impact on Conversion:**
+```sql
+SELECT 
+    CASE 
+        WHEN response_time_ms < 500 THEN 'Fast'
+        WHEN response_time_ms < 1000 THEN 'Medium'
+        ELSE 'Slow'
+    END as performance_bucket,
+    AVG(conversion_rate) as avg_conversion_rate
+FROM welcome_page_metrics
+GROUP BY performance_bucket;
+```
+
+### Testing Welcome Page Instrumentation
+
+#### Manual Testing
+```bash
+# Test welcome page tracking
+curl -H "Referer: https://google.com" http://localhost/
+
+# Test CTA tracking
+curl -H "Referer: http://localhost/" http://localhost/businesses
+curl -H "Referer: http://localhost/" http://localhost/onboard
+```
+
+#### Automated Testing
+```php
+// In tests/Feature/WelcomePageSentryTest.php
+public function test_welcome_page_sentry_instrumentation()
+{
+    // Mock Sentry
+    $this->mock(BusinessLogger::class)
+         ->shouldReceive('welcomePageViewed')
+         ->once();
+    
+    $response = $this->get('/');
+    $response->assertStatus(200);
+}
+```
+
 ## Key Learnings & Best Practices
 
 ### 1. API Design Patterns

@@ -703,6 +703,109 @@ $statistics = [
 },
 ```
 
+## Phase 8: Advanced Sentry Instrumentation
+
+### Welcome Page Analytics & Performance Monitoring
+
+**Objective:** Implement comprehensive Sentry instrumentation for the new marketing homepage to track user behavior, conversion funnels, and performance metrics.
+
+**New Sentry Instrumentation Features:**
+
+1. **Welcome Page Tracking**
+   - Page view analytics with referrer tracking
+   - Performance monitoring for page load times
+   - SVG rendering performance metrics (150+ elements)
+   - User engagement tracking
+
+2. **Conversion Funnel Analysis**
+   - CTA click tracking (`explore_businesses`, `list_business`, `nav_browse`, `nav_join`)
+   - User journey mapping from welcome page to actions
+   - Conversion rate monitoring with automatic alerts
+
+3. **Performance Optimization**
+   - SVG rendering time tracking
+   - Page load performance with automatic slow-load detection
+   - Device/browser performance analytics
+   - Response time correlation with conversion rates
+
+**BusinessLogger Service Enhancements:**
+```php
+// New methods added for welcome page tracking
+BusinessLogger::welcomePageViewed($request, $responseTime);
+BusinessLogger::welcomeCtaClicked($ctaType, $request);
+BusinessLogger::svgRenderingMetrics($renderTime, $svgData);
+BusinessLogger::welcomeEngagement($engagementType, $metadata);
+```
+
+**Route-Level Instrumentation:**
+```php
+// Enhanced welcome route with comprehensive tracking
+Route::get('/', function (Request $request) {
+    $transaction = BusinessLogger::startBusinessTransaction('welcome_page_view');
+    BusinessLogger::welcomePageViewed($request, null);
+    
+    $response = response()->view('welcome');
+    $responseTime = (microtime(true) - $startTime) * 1000;
+    
+    BusinessLogger::performanceMetric('welcome_page_render', $responseTime);
+    $transaction?->finish();
+    
+    return $response;
+});
+```
+
+**CTA Tracking Integration:**
+- Automatic tracking when users navigate from welcome page to business listing
+- Onboarding flow tracking with referrer detection
+- Conversion funnel visualization in Sentry dashboards
+
+**Sentry Dashboard Configuration:**
+- Custom dashboards for welcome page performance
+- Conversion funnel visualization
+- SVG rendering performance monitoring
+- Automatic alerts for performance degradation and low conversion rates
+
+**Business Intelligence Integration:**
+```sql
+-- Sample query for conversion rate analysis
+SELECT 
+    referrer_domain,
+    COUNT(*) as page_views,
+    COUNT(CASE WHEN event = 'welcome_cta_clicked' THEN 1 END) as cta_clicks,
+    (cta_clicks * 100.0 / page_views) as conversion_rate
+FROM sentry_events 
+WHERE event IN ('welcome_page_viewed', 'welcome_cta_clicked')
+GROUP BY referrer_domain
+ORDER BY conversion_rate DESC;
+```
+
+**Documentation Updates:**
+- Enhanced SENTRY_INTEGRATION.md with welcome page instrumentation section
+- Added testing procedures for Sentry tracking
+- Sample queries for business intelligence analysis
+- Alert configuration examples for production monitoring
+
+**Testing Integration:**
+```php
+// Automated testing for Sentry instrumentation
+public function test_welcome_page_sentry_instrumentation()
+{
+    $this->mock(BusinessLogger::class)
+         ->shouldReceive('welcomePageViewed')
+         ->once();
+    
+    $response = $this->get('/');
+    $response->assertStatus(200);
+}
+```
+
+**Results:**
+- ✅ Comprehensive welcome page analytics
+- ✅ Real-time conversion funnel tracking
+- ✅ Performance monitoring with automatic alerts
+- ✅ Business intelligence queries for optimization
+- ✅ Complete test coverage for instrumentation
+
 ## 🔮 Future Enhancements
 
 ### Planned Features

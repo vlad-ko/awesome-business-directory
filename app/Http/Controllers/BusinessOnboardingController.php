@@ -11,6 +11,15 @@ class BusinessOnboardingController extends Controller
 {
     public function create(Request $request)
     {
+        // Track if user came from welcome page CTA
+        $referrer = $request->header('referer');
+        if ($referrer && str_contains($referrer, request()->getSchemeAndHttpHost())) {
+            $path = parse_url($referrer, PHP_URL_PATH);
+            if ($path === '/') {
+                BusinessLogger::welcomeCtaClicked('list_business', $request);
+            }
+        }
+
         // Log that someone started the onboarding process
         BusinessLogger::onboardingStarted($request);
 

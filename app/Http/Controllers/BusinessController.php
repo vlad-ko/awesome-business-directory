@@ -11,13 +11,25 @@ class BusinessController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $startTime = microtime(true);
+
+        // Track if user came from welcome page CTA
+        $referrer = $request->header('referer');
+        $fromWelcomeCta = false;
+        if ($referrer && str_contains($referrer, request()->getSchemeAndHttpHost())) {
+            $path = parse_url($referrer, PHP_URL_PATH);
+            if ($path === '/') {
+                BusinessLogger::welcomeCtaClicked('explore_businesses', $request);
+                $fromWelcomeCta = true;
+            }
+        }
 
         // Start custom transaction for business listing
         $transaction = BusinessLogger::startBusinessTransaction('listing', [
             'page' => 'index',
+            'from_welcome_cta' => $fromWelcomeCta,
         ]);
 
         // Create span for database queries
