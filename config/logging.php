@@ -127,6 +127,19 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'sentry' => [
+            'driver' => 'sentry',
+            'level' => env('LOG_LEVEL', 'info'),
+            'bubble' => true,
+            'name' => 'business-directory',
+        ],
+
+        'structured' => [
+            'driver' => 'stack',
+            'channels' => ['single', 'sentry'],
+            'name' => 'structured-logs',
+        ],
+
     ],
 
 ];

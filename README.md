@@ -537,3 +537,110 @@ For issues and questions:
 - 🏗️ **Clean architecture** with Eloquent scopes and organized controllers
 - 📚 **Extensive documentation** covering implementation journey and troubleshooting
 - 🔧 **Production-ready** with proper validation, error handling, and asset optimization
+
+### 🔍 Sentry Integration
+
+Our application includes comprehensive Sentry.io integration for:
+- **Error Tracking**: Automatic capture of exceptions with rich context
+- **Performance Monitoring**: Track response times and database queries
+- **Custom Business Logic Monitoring**: Track business onboarding, validation failures, and admin actions
+- **User Journey Tracking**: Monitor user flows from welcome page to business creation
+
+Key features:
+- Custom `BusinessLogger` service for structured logging
+- Transaction and span tracking for performance insights
+- Breadcrumb trails for debugging user issues
+- Admin action monitoring and business intelligence
+
+### 📊 Sentry Logs Integration (Beta)
+
+**Advanced Centralized Logging**: Our application now features Sentry Logs integration, providing unified log management alongside error tracking and performance monitoring.
+
+#### Key Benefits
+
+- **Unified Dashboard**: View logs, errors, and performance data in a single Sentry interface
+- **Rich Context**: Every log entry includes user session, performance metrics, and business context
+- **Advanced Filtering**: Tag-based organization enables powerful searching and filtering
+- **Performance Correlation**: Link log events directly to transaction performance data
+- **Real-time Monitoring**: Stream logs in real-time with automatic alerting for critical events
+
+#### Enhanced Logging Capabilities
+
+```php
+// Critical business events with automatic alerting
+BusinessLogger::criticalBusinessEvent('payment_processor_down', [
+    'processor' => 'stripe',
+    'impact_level' => 'high',
+    'affected_users' => 150,
+]);
+
+// User journey milestone tracking for conversion analysis
+BusinessLogger::userJourneyMilestone('onboarding_completed', [
+    'completion_time_minutes' => 12,
+    'validation_errors_encountered' => 2,
+]);
+
+// Business analytics insights for intelligence gathering
+BusinessLogger::businessInsight('conversion_rate_analysis', [
+    'conversion_rate' => 0.23,
+    'total_visitors' => 1250,
+]);
+
+// Security event monitoring with priority-based alerting
+BusinessLogger::securityEvent('suspicious_login_attempt', [
+    'ip_address' => $request->ip(),
+    'failure_count' => 5,
+]);
+```
+
+#### Structured Data & Context
+
+Every log entry automatically includes:
+- **User Session Context**: Session ID, IP address, user agent, referrer
+- **Business Context**: Industry, location, business type, processing stage
+- **Performance Context**: Processing times, database query counts, performance grades
+- **Request Context**: HTTP method, URL, headers, validation states
+
+#### Tag-Based Organization
+
+Logs are automatically tagged for powerful filtering:
+- `feature`: business_onboarding, business_creation, validation, admin_actions
+- `event_category`: user_action, performance_issue, validation_error, critical_event
+- `onboarding_stage`: started, validation_failed, completed
+- `business_industry`: restaurant, retail, service, technology
+- `priority`: high, medium, low
+
+#### Dashboard & Analytics
+
+**Business Intelligence Queries:**
+```sql
+-- Conversion funnel analysis
+SELECT onboarding_stage, COUNT(*) as events, AVG(processing_time_ms) as avg_time
+FROM sentry_logs WHERE feature = 'business_onboarding' GROUP BY onboarding_stage;
+
+-- Performance analysis by industry
+SELECT business_industry, AVG(processing_time_ms) as avg_time
+FROM sentry_logs WHERE event_category = 'business_action' GROUP BY business_industry;
+
+-- Validation error patterns
+SELECT JSON_EXTRACT(context, '$.validation_errors.failed_fields') as fields, COUNT(*) as errors
+FROM sentry_logs WHERE event_category = 'validation_error' GROUP BY fields;
+```
+
+**Key Monitoring Metrics:**
+- Onboarding conversion rates with abandonment analysis
+- Validation error patterns for UX optimization
+- Performance degradation monitoring with correlation
+- Critical business event alerting with immediate notification
+
+#### Configuration
+
+**Environment Setup:**
+```env
+SENTRY_ENABLE_LOGS=true
+LOG_STACK=single,structured
+```
+
+**Log Channels:**
+- `sentry`: Direct Sentry logging with business-directory tag
+- `structured`: Combined file and Sentry logging for comprehensive coverage

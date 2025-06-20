@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 use Sentry\State\Scope;
 use function Sentry\addBreadcrumb;
 use function Sentry\captureException;
+use function Sentry\captureMessage;
 use function Sentry\configureScope;
 use function Sentry\startTransaction;
 use Sentry\SentrySdk;
@@ -18,6 +19,73 @@ use Sentry\Severity;
 
 class BusinessLogger
 {
+    /**
+     * Send structured log to Sentry with enhanced context
+     */
+    private static function logToSentry(string $level, string $message, array $data, array $tags = [], array $context = []): void
+    {
+        // Send to structured log channel (includes Sentry)
+        Log::channel('structured')->{$level}($message, $data);
+
+        // Enhance Sentry context
+        configureScope(function (Scope $scope) use ($tags, $context, $data): void {
+            // Add tags for filtering
+            foreach ($tags as $key => $value) {
+                $scope->setTag($key, $value);
+            }
+
+            // Add structured context
+            foreach ($context as $key => $value) {
+                $scope->setContext($key, $value);
+            }
+
+            // Add event-specific context
+            if (isset($data['event'])) {
+                $scope->setTag('event_type', $data['event']);
+            }
+
+            // Add performance context if available
+            if (isset($data['processing_time_ms']) || isset($data['response_time_ms'])) {
+                $performanceTime = $data['processing_time_ms'] ?? $data['response_time_ms'];
+                $scope->setContext('performance', [
+                    'duration_ms' => $performanceTime,
+                    'grade' => self::getPerformanceGrade($performanceTime),
+                ]);
+            }
+
+            // Add user context if session exists
+            if (isset($data['session_id'])) {
+                $scope->setUser([
+                    'session_id' => $data['session_id'],
+                    'ip_address' => $data['ip_address'] ?? null,
+                ]);
+            }
+        });
+
+        // Send direct message to Sentry for important events
+        if (in_array($level, ['warning', 'error', 'critical'])) {
+            captureMessage($message, self::getSentryLevel($level));
+        }
+    }
+
+    /**
+     * Convert Laravel log level to Sentry severity
+     */
+    private static function getSentryLevel(string $level): Severity
+    {
+        return match ($level) {
+            'debug' => Severity::debug(),
+            'info' => Severity::info(),
+            'notice' => Severity::info(),
+            'warning' => Severity::warning(),
+            'error' => Severity::error(),
+            'critical' => Severity::fatal(),
+            'alert' => Severity::fatal(),
+            'emergency' => Severity::fatal(),
+            default => Severity::info(),
+        };
+    }
+
     /**
      * Log business onboarding started event
      */
@@ -32,7 +100,25 @@ class BusinessLogger
             'referrer' => $request->header('referer'),
         ];
 
-        Log::info("Business onboarding form viewed", $data);
+        // Send to Sentry Logs with enhanced context
+        self::logToSentry(
+            level: 'info',
+            message: 'Business onboarding form viewed',
+            data: $data,
+            tags: [
+                'feature' => 'business_onboarding',
+                'event_category' => 'user_action',
+                'onboarding_stage' => 'started',
+            ],
+            context: [
+                'user_session' => [
+                    'session_id' => session()->getId(),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'referrer' => $request->header('referer'),
+                ],
+            ]
+        );
 
         // Add Sentry breadcrumb for tracking user journey
         addBreadcrumb(
@@ -43,21 +129,12 @@ class BusinessLogger
                 'referrer' => $request->header('referer'),
             ]
         );
-
-        // Set Sentry user context
-        configureScope(function (Scope $scope) use ($request): void {
-            $scope->setUser([
-                'ip_address' => $request->ip(),
-                'session_id' => session()->getId(),
-            ]);
-            $scope->setTag('feature', 'business_onboarding');
-        });
     }
 
     /**
      * Log successful business creation
      */
-    public static function businessCreated(Business $business, float $processingTimeMs = null): void
+    public static function businessCreated(Business $business, ?float $processingTimeMs = null): void
     {
         $data = [
             'event' => 'business_created',
@@ -78,7 +155,37 @@ class BusinessLogger
             'session_id' => session()->getId(),
         ];
 
-        Log::info("Business created successfully", $data);
+        // Send to Sentry Logs with enhanced context
+        self::logToSentry(
+            level: 'info',
+            message: 'Business created successfully',
+            data: $data,
+            tags: [
+                'feature' => 'business_creation',
+                'event_category' => 'business_action',
+                'business_industry' => $business->industry,
+                'business_type' => $business->business_type,
+                'business_location' => $business->city . ', ' . $business->state_province,
+                'onboarding_stage' => 'completed',
+            ],
+            context: [
+                'business' => [
+                    'id' => $business->id,
+                    'name' => $business->business_name,
+                    'slug' => $business->business_slug,
+                    'industry' => $business->industry,
+                    'type' => $business->business_type,
+                    'location' => [
+                        'city' => $business->city,
+                        'state_province' => $business->state_province,
+                        'country' => $business->country,
+                    ],
+                    'status' => $business->status,
+                    'is_verified' => $business->is_verified,
+                    'is_featured' => $business->is_featured,
+                ],
+            ]
+        );
 
         // Add Sentry breadcrumb for successful business creation
         addBreadcrumb(
@@ -91,19 +198,6 @@ class BusinessLogger
                 'processing_time_ms' => $processingTimeMs,
             ]
         );
-
-        // Set additional Sentry context
-        configureScope(function (Scope $scope) use ($business, $processingTimeMs): void {
-            $scope->setTag('business_industry', $business->industry);
-            $scope->setTag('business_type', $business->business_type);
-            $scope->setTag('business_location', $business->city . ', ' . $business->state_province);
-            $scope->setContext('business', [
-                'id' => $business->id,
-                'name' => $business->business_name,
-                'slug' => $business->business_slug,
-                'processing_time_ms' => $processingTimeMs,
-            ]);
-        });
     }
 
     /**
@@ -111,7 +205,7 @@ class BusinessLogger
      */
     public static function validationFailed(array $errors, Request $request): void
     {
-        Log::warning("Business validation failed", [
+        $data = [
             'event' => 'business_validation_failed',
             'timestamp' => now()->toISOString(),
             'errors' => $errors,
@@ -120,13 +214,39 @@ class BusinessLogger
             'input_fields' => array_keys($request->except(['_token', 'password'])),
             'session_id' => session()->getId(),
             'ip_address' => $request->ip(),
-        ]);
+        ];
+
+        // Send to Sentry Logs with enhanced context
+        self::logToSentry(
+            level: 'warning',
+            message: 'Business validation failed',
+            data: $data,
+            tags: [
+                'feature' => 'business_validation',
+                'event_category' => 'validation_error',
+                'error_count' => (string) count($errors),
+                'onboarding_stage' => 'validation_failed',
+            ],
+            context: [
+                'validation_errors' => [
+                    'errors' => $errors,
+                    'failed_fields' => array_keys($errors),
+                    'input_fields' => array_keys($request->except(['_token', 'password'])),
+                    'error_count' => count($errors),
+                ],
+                'request_info' => [
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'session_id' => session()->getId(),
+                ],
+            ]
+        );
     }
 
     /**
      * Log business listing page views
      */
-    public static function listingViewed(Collection $businesses, float $responseTimeMs = null): void
+    public static function listingViewed(Collection $businesses, ?float $responseTimeMs = null): void
     {
         $stats = [
             'total_businesses' => $businesses->count(),
@@ -170,22 +290,46 @@ class BusinessLogger
     /**
      * Log slow query performance issues
      */
-    public static function slowQuery(string $queryType, float $executionTimeMs, string $sql = null): void
+    public static function slowQuery(string $queryType, float $executionTimeMs, ?string $sql = null): void
     {
-        Log::warning("Slow query detected", [
+        $severity = $executionTimeMs > 1000 ? 'critical' : 'warning';
+        $data = [
             'event' => 'slow_query',
             'timestamp' => now()->toISOString(),
             'query_type' => $queryType,
             'execution_time_ms' => $executionTimeMs,
             'query_sql' => $sql,
-            'threshold_exceeded' => $executionTimeMs > 1000 ? 'critical' : 'warning',
-        ]);
+            'threshold_exceeded' => $severity,
+        ];
+
+        // Send to Sentry Logs with enhanced context
+        self::logToSentry(
+            level: $severity === 'critical' ? 'error' : 'warning',
+            message: 'Slow query detected',
+            data: $data,
+            tags: [
+                'feature' => 'database_performance',
+                'event_category' => 'performance_issue',
+                'query_type' => $queryType,
+                'severity' => $severity,
+                'performance_grade' => self::getPerformanceGrade($executionTimeMs),
+            ],
+            context: [
+                'database_performance' => [
+                    'query_type' => $queryType,
+                    'execution_time_ms' => $executionTimeMs,
+                    'query_sql' => $sql ? substr($sql, 0, 500) . '...' : null, // Truncate for Sentry
+                    'threshold_exceeded' => $severity,
+                    'performance_impact' => $executionTimeMs > 2000 ? 'high' : 'medium',
+                ],
+            ]
+        );
     }
 
     /**
      * Log business search/filter operations
      */
-    public static function businessSearched(array $filters, int $resultCount, float $searchTimeMs = null): void
+    public static function businessSearched(array $filters, int $resultCount, ?float $searchTimeMs = null): void
     {
         Log::info("Business search performed", [
             'event' => 'business_searched',
@@ -220,7 +364,7 @@ class BusinessLogger
     /**
      * Create a span for database operations
      */
-    public static function createDatabaseSpan(string $operation, string $description = null): ?\Sentry\Tracing\Span
+    public static function createDatabaseSpan(string $operation, ?string $description = null): ?\Sentry\Tracing\Span
     {
         $transaction = SentrySdk::getCurrentHub()->getTransaction();
         if (!$transaction) {
@@ -286,7 +430,7 @@ class BusinessLogger
     /**
      * Log application errors with business context
      */
-    public static function applicationError(\Throwable $exception, string $context = null, array $additionalData = []): void
+    public static function applicationError(\Throwable $exception, ?string $context = null, array $additionalData = []): void
     {
         $data = [
             'event' => 'application_error',
@@ -365,7 +509,7 @@ class BusinessLogger
     /**
      * Log welcome page views and user engagement
      */
-    public static function welcomePageViewed(Request $request, float $responseTimeMs = null): void
+    public static function welcomePageViewed(Request $request, ?float $responseTimeMs = null): void
     {
         $data = [
             'event' => 'welcome_page_viewed',
@@ -445,7 +589,7 @@ class BusinessLogger
     /**
      * Log SVG rendering performance and issues
      */
-    public static function svgRenderingMetrics(float $renderTimeMs = null, array $svgData = []): void
+    public static function svgRenderingMetrics(?float $renderTimeMs = null, array $svgData = []): void
     {
         $data = [
             'event' => 'svg_rendering_tracked',
@@ -684,5 +828,135 @@ class BusinessLogger
             'owner_name', 'owner_email', 'owner_phone' => 'owner',
             default => 'unknown'
         };
+    }
+
+    /**
+     * Log critical business events to Sentry
+     */
+    public static function criticalBusinessEvent(string $eventType, array $data = []): void
+    {
+        $logData = [
+            'event' => 'critical_business_event',
+            'event_type' => $eventType,
+            'timestamp' => now()->toISOString(),
+            'session_id' => session()->getId(),
+            ...$data,
+        ];
+
+        self::logToSentry(
+            level: 'error',
+            message: "Critical business event: {$eventType}",
+            data: $logData,
+            tags: [
+                'feature' => 'business_critical',
+                'event_category' => 'critical_event',
+                'event_type' => $eventType,
+                'priority' => 'high',
+            ],
+            context: [
+                'critical_event' => [
+                    'type' => $eventType,
+                    'data' => $data,
+                    'requires_attention' => true,
+                ],
+            ]
+        );
+    }
+
+    /**
+     * Log user journey milestones to Sentry
+     */
+    public static function userJourneyMilestone(string $milestone, array $journeyData = []): void
+    {
+        $data = [
+            'event' => 'user_journey_milestone',
+            'milestone' => $milestone,
+            'timestamp' => now()->toISOString(),
+            'session_id' => session()->getId(),
+            ...$journeyData,
+        ];
+
+        self::logToSentry(
+            level: 'info',
+            message: "User journey milestone: {$milestone}",
+            data: $data,
+            tags: [
+                'feature' => 'user_journey',
+                'event_category' => 'milestone',
+                'milestone' => $milestone,
+            ],
+            context: [
+                'user_journey' => [
+                    'milestone' => $milestone,
+                    'journey_data' => $journeyData,
+                    'progress_tracking' => true,
+                ],
+            ]
+        );
+    }
+
+    /**
+     * Log business insights and analytics to Sentry
+     */
+    public static function businessInsight(string $insightType, array $metrics = []): void
+    {
+        $data = [
+            'event' => 'business_insight',
+            'insight_type' => $insightType,
+            'timestamp' => now()->toISOString(),
+            'metrics' => $metrics,
+        ];
+
+        self::logToSentry(
+            level: 'info',
+            message: "Business insight: {$insightType}",
+            data: $data,
+            tags: [
+                'feature' => 'business_analytics',
+                'event_category' => 'insight',
+                'insight_type' => $insightType,
+            ],
+            context: [
+                'business_analytics' => [
+                    'insight_type' => $insightType,
+                    'metrics' => $metrics,
+                    'analytics_enabled' => true,
+                ],
+            ]
+        );
+    }
+
+    /**
+     * Log security-related events to Sentry
+     */
+    public static function securityEvent(string $eventType, array $securityData = []): void
+    {
+        $data = [
+            'event' => 'security_event',
+            'security_event_type' => $eventType,
+            'timestamp' => now()->toISOString(),
+            'session_id' => session()->getId(),
+            'ip_address' => request()?->ip(),
+            ...$securityData,
+        ];
+
+        self::logToSentry(
+            level: 'warning',
+            message: "Security event: {$eventType}",
+            data: $data,
+            tags: [
+                'feature' => 'security',
+                'event_category' => 'security_event',
+                'security_event_type' => $eventType,
+                'priority' => 'high',
+            ],
+            context: [
+                'security' => [
+                    'event_type' => $eventType,
+                    'security_data' => $securityData,
+                    'requires_monitoring' => true,
+                ],
+            ]
+        );
     }
 } 

@@ -14,10 +14,11 @@ This document provides comprehensive guidance for Sentry.io integration in the A
 6. [BusinessLogger Service Design](#businesslogger-service-design)
 7. [Controller Integration Strategy](#controller-integration-strategy)
 8. [Error Handling Philosophy](#error-handling-philosophy)
-9. [Testing & Validation](#testing--validation)
-10. [Production Considerations](#production-considerations)
-11. [Troubleshooting](#troubleshooting)
-12. [Key Learnings & Best Practices](#key-learnings--best-practices)
+9. [Sentry Logs Integration](#sentry-logs-integration)
+10. [Testing & Validation](#testing--validation)
+11. [Production Considerations](#production-considerations)
+12. [Troubleshooting](#troubleshooting)
+13. [Key Learnings & Best Practices](#key-learnings--best-practices)
 
 ## Core Concepts & Philosophy
 
@@ -831,6 +832,409 @@ $transaction?->setData([
 - Complete user journey leading to error
 - Performance metrics showing gradual slowdown
 - Exact input data for reproduction
+
+## Sentry Logs Integration
+
+### Understanding Sentry Logs vs Traditional Logging
+
+Sentry Logs (currently in Beta) represents a paradigm shift from traditional application logging by providing centralized, structured, and contextually-rich log management directly within the Sentry ecosystem.
+
+#### Traditional Laravel Logging Limitations
+```php
+// Traditional approach - isolated logs
+Log::info('Business created', ['business_id' => $business->id]);
+Log::warning('Slow query detected', ['duration' => $queryTime]);
+Log::error('Validation failed', ['errors' => $errors]);
+```
+
+**Problems with this approach:**
+- **Fragmented Context**: Logs exist in isolation without correlation
+- **Limited Searchability**: Basic text-based searching
+- **No Performance Correlation**: Can't easily link logs to transactions/spans
+- **Separate Tooling**: Requires different tools for logs vs errors vs performance
+
+#### Sentry Logs Enhanced Approach
+```php
+// Enhanced approach - contextually-rich, correlated logs
+BusinessLogger::logToSentry(
+    level: 'info',
+    message: 'Business created successfully',
+    data: $businessData,
+    tags: ['feature' => 'business_creation', 'industry' => $business->industry],
+    context: ['business' => $businessDetails, 'performance' => $metrics]
+);
+```
+
+**Advantages:**
+- **Unified Dashboard**: Logs, errors, and performance in one interface
+- **Rich Context**: Automatic correlation with transactions and user sessions
+- **Advanced Filtering**: Tag-based filtering and search capabilities
+- **Performance Correlation**: Link log events to performance metrics
+- **User Journey Tracking**: See logs in context of user actions
+
+### Implementation Architecture
+
+#### 1. Configuration Setup
+
+**Enable Sentry Logs in Configuration:**
+```php
+// config/sentry.php
+'enable_logs' => env('SENTRY_ENABLE_LOGS', true),
+```
+
+**Configure Log Channels:**
+```php
+// config/logging.php
+'channels' => [
+    'sentry' => [
+        'driver' => 'sentry',
+        'level' => env('LOG_LEVEL', 'info'),
+        'bubble' => true,
+        'name' => 'business-directory',
+    ],
+    
+    'structured' => [
+        'driver' => 'stack',
+        'channels' => ['single', 'sentry'],
+        'name' => 'structured-logs',
+    ],
+],
+```
+
+**Environment Configuration:**
+```env
+SENTRY_ENABLE_LOGS=true
+LOG_STACK=single,structured  # Send logs to both file and Sentry
+```
+
+#### 2. BusinessLogger Enhancement
+
+The `BusinessLogger` service has been enhanced with a centralized `logToSentry()` method that provides:
+
+```php
+private static function logToSentry(
+    string $level,           // Log level (info, warning, error, etc.)
+    string $message,         // Human-readable message
+    array $data,            // Structured log data
+    array $tags = [],       // Filterable tags
+    array $context = []     // Rich contextual information
+): void
+```
+
+**Key Features:**
+- **Automatic Context Enhancement**: Adds performance metrics, user session data
+- **Tag-Based Organization**: Enables powerful filtering in Sentry dashboard
+- **Level-Appropriate Handling**: Critical events trigger direct Sentry messages
+- **Structured Data**: Maintains data structure for querying and analysis
+
+#### 3. Enhanced Logging Methods
+
+**Business Onboarding Logging:**
+```php
+public static function onboardingStarted(Request $request): void
+{
+    self::logToSentry(
+        level: 'info',
+        message: 'Business onboarding form viewed',
+        data: [
+            'event' => 'business_onboarding_started',
+            'timestamp' => now()->toISOString(),
+            'session_id' => session()->getId(),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'referrer' => $request->header('referer'),
+        ],
+        tags: [
+            'feature' => 'business_onboarding',
+            'event_category' => 'user_action',
+            'onboarding_stage' => 'started',
+        ],
+        context: [
+            'user_session' => [
+                'session_id' => session()->getId(),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'referrer' => $request->header('referer'),
+            ],
+        ]
+    );
+}
+```
+
+**Business Creation Logging:**
+```php
+public static function businessCreated(Business $business, float $processingTimeMs = null): void
+{
+    self::logToSentry(
+        level: 'info',
+        message: 'Business created successfully',
+        data: [...], // Business data
+        tags: [
+            'feature' => 'business_creation',
+            'business_industry' => $business->industry,
+            'business_type' => $business->business_type,
+            'onboarding_stage' => 'completed',
+        ],
+        context: [
+            'business' => [...], // Complete business context
+        ]
+    );
+}
+```
+
+**Validation Error Logging:**
+```php
+public static function validationFailed(array $errors, Request $request): void
+{
+    self::logToSentry(
+        level: 'warning',
+        message: 'Business validation failed',
+        data: [...],
+        tags: [
+            'feature' => 'business_validation',
+            'event_category' => 'validation_error',
+            'error_count' => (string) count($errors),
+        ],
+        context: [
+            'validation_errors' => [...],
+            'request_info' => [...],
+        ]
+    );
+}
+```
+
+### Advanced Logging Capabilities
+
+#### 1. Critical Business Events
+```php
+BusinessLogger::criticalBusinessEvent('payment_processor_down', [
+    'processor' => 'stripe',
+    'error_code' => 'connection_timeout',
+    'impact_level' => 'high',
+    'affected_users' => 150,
+]);
+```
+
+#### 2. User Journey Milestones
+```php
+BusinessLogger::userJourneyMilestone('onboarding_completed', [
+    'completion_time_minutes' => 12,
+    'form_sections_completed' => 4,
+    'validation_errors_encountered' => 2,
+]);
+```
+
+#### 3. Business Analytics Insights
+```php
+BusinessLogger::businessInsight('conversion_rate_analysis', [
+    'period' => 'weekly',
+    'conversion_rate' => 0.23,
+    'total_visitors' => 1250,
+    'completed_onboardings' => 287,
+]);
+```
+
+#### 4. Security Event Logging
+```php
+BusinessLogger::securityEvent('suspicious_login_attempt', [
+    'ip_address' => $request->ip(),
+    'attempted_email' => $email,
+    'failure_count' => 5,
+    'geographic_location' => 'Unknown',
+]);
+```
+
+### Sentry Dashboard Integration
+
+#### 1. Log Stream View
+- **Real-time Logs**: See logs as they happen in production
+- **Filtering**: Filter by tags, levels, time ranges
+- **Search**: Full-text search across log messages and data
+- **Correlation**: Click through to related transactions and errors
+
+#### 2. Performance Correlation
+```php
+// Logs automatically include performance context when available
+'performance' => [
+    'duration_ms' => 250,
+    'grade' => 'good',  // excellent, good, fair, poor
+]
+```
+
+#### 3. Tag-Based Organization
+Logs are automatically tagged for powerful filtering:
+- `feature`: business_onboarding, business_creation, validation
+- `event_category`: user_action, performance_issue, validation_error
+- `onboarding_stage`: started, validation_failed, completed
+- `business_industry`: restaurant, retail, service
+- `priority`: high, medium, low
+
+#### 4. Context Enrichment
+Every log includes rich context:
+- **User Session**: Session ID, IP address, user agent
+- **Business Context**: Business details, industry, location
+- **Performance Context**: Processing times, database queries
+- **Request Context**: HTTP method, URL, headers
+
+### Query and Analysis Capabilities
+
+#### 1. Business Intelligence Queries
+```sql
+-- Find conversion bottlenecks
+SELECT 
+    onboarding_stage,
+    COUNT(*) as event_count,
+    AVG(processing_time_ms) as avg_processing_time
+FROM sentry_logs 
+WHERE feature = 'business_onboarding'
+GROUP BY onboarding_stage;
+```
+
+#### 2. Performance Analysis
+```sql
+-- Identify slow operations by industry
+SELECT 
+    business_industry,
+    AVG(processing_time_ms) as avg_time,
+    COUNT(*) as operation_count
+FROM sentry_logs 
+WHERE event_category = 'business_action'
+GROUP BY business_industry
+ORDER BY avg_time DESC;
+```
+
+#### 3. Error Pattern Analysis
+```sql
+-- Most common validation errors
+SELECT 
+    JSON_EXTRACT(context, '$.validation_errors.failed_fields') as failed_fields,
+    COUNT(*) as error_count
+FROM sentry_logs 
+WHERE event_category = 'validation_error'
+GROUP BY failed_fields
+ORDER BY error_count DESC;
+```
+
+### Best Practices for Sentry Logs
+
+#### 1. Structured Data Design
+```php
+// Good: Consistent structure
+$data = [
+    'event' => 'business_action_completed',
+    'timestamp' => now()->toISOString(),
+    'business_id' => $business->id,
+    'processing_time_ms' => $processingTime,
+    'session_id' => session()->getId(),
+];
+
+// Avoid: Inconsistent or unstructured data
+$data = ['message' => 'Something happened with business ' . $business->id];
+```
+
+#### 2. Meaningful Tags
+```php
+// Good: Specific, filterable tags
+'tags' => [
+    'feature' => 'business_onboarding',
+    'onboarding_stage' => 'validation_failed',
+    'business_industry' => 'restaurant',
+    'error_severity' => 'medium',
+]
+
+// Avoid: Generic or non-filterable tags
+'tags' => ['type' => 'log', 'status' => 'done']
+```
+
+#### 3. Context Hierarchy
+```php
+// Good: Organized context structure
+'context' => [
+    'business' => [...],
+    'user_session' => [...],
+    'performance' => [...],
+    'validation_errors' => [...],
+]
+
+// Avoid: Flat context structure
+'context' => [
+    'business_name' => $name,
+    'session_id' => $session,
+    'error_field' => $field,
+    // ... mixed context types
+]
+```
+
+#### 4. Log Level Strategy
+```php
+// info: Normal business operations
+BusinessLogger::logToSentry('info', 'Business created successfully', ...);
+
+// warning: Issues that don't stop operations but need attention
+BusinessLogger::logToSentry('warning', 'Slow database query detected', ...);
+
+// error: Problems that affect functionality
+BusinessLogger::logToSentry('error', 'Payment processor unavailable', ...);
+```
+
+### Monitoring and Alerting
+
+#### 1. Key Metrics to Monitor
+- **Onboarding Conversion Rate**: Track completion vs abandonment
+- **Validation Error Patterns**: Identify problematic form fields
+- **Performance Degradation**: Monitor processing time trends
+- **Critical Business Events**: Alert on payment/integration failures
+
+#### 2. Alert Configuration
+```javascript
+// Sentry Alert Rules
+{
+  "conditions": [
+    {"name": "sentry.rules.conditions.tagged_event.TaggedEventCondition",
+     "key": "feature", "match": "eq", "value": "business_critical"},
+    {"name": "sentry.rules.conditions.event_frequency.EventFrequencyCondition",
+     "value": 1, "interval": "1m"}
+  ],
+  "actions": [
+    {"name": "sentry.mail.actions.NotifyEmailAction"},
+    {"name": "sentry.integrations.slack.notify_action.SlackNotifyServiceAction"}
+  ]
+}
+```
+
+#### 3. Dashboard Configuration
+Create custom dashboards for:
+- **Business Operations**: Onboarding funnel, completion rates
+- **Performance Monitoring**: Response times, database performance
+- **Error Tracking**: Validation errors, system failures
+- **User Journey**: Session flows, abandonment points
+
+### Testing Sentry Logs Integration
+
+#### 1. Development Testing
+```php
+// Test log creation and structure
+BusinessLogger::logToSentry('info', 'Test log message', [
+    'test_data' => 'validation',
+    'timestamp' => now()->toISOString(),
+], ['test' => 'true'], ['test_context' => ['verified' => true]]);
+```
+
+#### 2. Integration Testing
+```bash
+# Test log channel configuration
+./vendor/bin/sail artisan tinker
+>>> Log::channel('structured')->info('Test structured logging');
+
+# Verify Sentry connectivity
+./vendor/bin/sail artisan sentry:test
+```
+
+#### 3. Production Validation
+- Monitor Sentry dashboard for log ingestion
+- Verify tag filtering functionality
+- Test alert configurations
+- Validate query performance
 
 ## Testing & Validation
 
