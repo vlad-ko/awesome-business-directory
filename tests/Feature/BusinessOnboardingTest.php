@@ -20,9 +20,9 @@ class BusinessOnboardingTest extends TestCase
 
         $response->assertStatus(200)
             ->assertViewIs('onboarding.create')
-            ->assertSee('Business Onboarding')
-            ->assertSee('Business Name')
-            ->assertSee('Industry');
+            ->assertSee('Get Your Business')
+            ->assertSee('your business called')
+            ->assertSee('industry are you');
     }
 
     #[Test]
@@ -196,5 +196,67 @@ class BusinessOnboardingTest extends TestCase
         // Should have a different slug
         $this->assertNotEquals($business1->business_slug, $business2->business_slug);
         $this->assertEquals('test-company-2', $business2->business_slug);
+    }
+
+    #[Test]
+    public function onboarding_form_renders_successfully()
+    {
+        $response = $this->get(route('business.onboard'));
+        $response->assertStatus(200);
+        $response->assertViewIs('onboarding.create');
+    }
+
+    #[Test]
+    public function validation_errors_display_properly()
+    {
+        // Submit empty form to trigger validation errors
+        $response = $this->post(route('business.store'), []);
+        $response->assertSessionHasErrors([
+            'business_name',
+            'industry',
+            'description',
+            'primary_email'
+        ]);
+    }
+
+    #[Test]
+    public function successful_business_creation_with_technology_industry()
+    {
+        $businessData = [
+            'business_name' => $this->faker->company,
+            'industry' => 'Technology',
+            'business_type' => 'LLC',
+            'description' => $this->faker->paragraph,
+            'primary_email' => $this->faker->email,
+            'phone_number' => $this->faker->phoneNumber,
+            'street_address' => $this->faker->streetAddress,
+            'city' => $this->faker->city,
+            'state_province' => $this->faker->state,
+            'postal_code' => $this->faker->postcode,
+            'country' => $this->faker->country,
+            'owner_name' => $this->faker->name,
+            'owner_email' => $this->faker->email,
+        ];
+
+        $response = $this->post(route('business.store'), $businessData);
+        $response->assertRedirect(route('business.onboard'))
+                ->assertSessionHas('success');
+        
+        $this->assertDatabaseHas('businesses', [
+            'business_name' => $businessData['business_name'],
+            'industry' => 'Technology'
+        ]);
+    }
+
+    #[Test]
+    public function onboarding_form_accessible_from_welcome_page()
+    {
+        // Simulate coming from welcome page
+        $response = $this->get(route('business.onboard'), [
+            'HTTP_REFERER' => url('/')
+        ]);
+        
+        $response->assertStatus(200);
+        $response->assertViewIs('onboarding.create');
     }
 }

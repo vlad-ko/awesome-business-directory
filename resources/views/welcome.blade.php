@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name', 'Laravel') }} - Discover Amazing Local Businesses</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
+        <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <style>
+            @vite(['resources/css/app.css', 'resources/js/app.js'])
+            <style>
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
@@ -17,8 +17,8 @@
         .retro-text {
             text-shadow: 3px 3px 0px #ff6b6b, 6px 6px 0px #4ecdc4;
         }
-    </style>
-</head>
+            </style>
+    </head>
 <body class="font-sans antialiased">
     <div class="min-h-screen gradient-bg">
         <!-- Header -->
@@ -33,14 +33,14 @@
                         <a href="{{ route('business.onboard') }}" class="bg-yellow-400 hover:bg-yellow-300 text-purple-800 px-6 py-2 rounded-full font-bold transition-all duration-200 transform hover:scale-105 neon-glow">Join Directory</a>
                     </div>
                 </div>
-            </nav>
+                </nav>
         </header>
 
         <!-- Hero Section -->
         <main class="container mx-auto px-6 py-12">
             <!-- Hero Content -->
             <div class="text-center mb-12">
-                <h1 class="text-5xl lg:text-7xl font-bold text-white mb-6 retro-text">
+                <h1 class="text-3xl lg:text-4xl xl:text-5xl font-bold text-white mb-6 retro-text leading-tight">
                     Discover Your
                     <span class="text-yellow-300">Neighborhood</span>
                     Gems! 💎
@@ -62,10 +62,11 @@
                     </a>
                 </div>
             </div>
+        </main>
 
-            <!-- Full Width SVG -->
-            <div class="w-full mb-16">
-                <svg width="100%" height="400" viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-2xl w-full" preserveAspectRatio="xMidYMid meet">
+        <!-- Full Width SVG - Outside Container -->
+        <div class="w-full mb-16">
+            <svg width="100%" height="300" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-2xl w-full" preserveAspectRatio="xMidYMid meet">
                         <!-- Sky with gradient -->
                         <defs>
                             <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -79,109 +80,192 @@
                         </defs>
                         
                         <!-- Sky background -->
-                        <rect width="500" height="250" fill="url(#skyGradient)"/>
+                        <rect width="800" height="180" fill="url(#skyGradient)"/>
                         
                         <!-- Sun -->
-                        <circle cx="400" cy="80" r="40" fill="url(#sunGradient)" opacity="0.9"/>
-                        <circle cx="400" cy="80" r="45" fill="none" stroke="#FFD700" stroke-width="2" opacity="0.5"/>
-                        <circle cx="400" cy="80" r="50" fill="none" stroke="#FFD700" stroke-width="1" opacity="0.3"/>
+                        <circle cx="650" cy="60" r="30" fill="url(#sunGradient)" opacity="0.9"/>
+                        <circle cx="650" cy="60" r="35" fill="none" stroke="#FFD700" stroke-width="2" opacity="0.5"/>
+                        <circle cx="650" cy="60" r="40" fill="none" stroke="#FFD700" stroke-width="1" opacity="0.3"/>
                         
                         <!-- Clouds -->
-                        <ellipse cx="120" cy="60" rx="30" ry="15" fill="white" opacity="0.8"/>
-                        <ellipse cx="140" cy="55" rx="25" ry="12" fill="white" opacity="0.8"/>
-                        <ellipse cx="300" cy="90" rx="35" ry="18" fill="white" opacity="0.7"/>
-                        <ellipse cx="320" cy="85" rx="28" ry="14" fill="white" opacity="0.7"/>
+                        <ellipse cx="100" cy="40" rx="25" ry="12" fill="white" opacity="0.8"/>
+                        <ellipse cx="115" cy="35" rx="20" ry="10" fill="white" opacity="0.8"/>
+                        <ellipse cx="250" cy="50" rx="30" ry="15" fill="white" opacity="0.7"/>
+                        <ellipse cx="270" cy="45" rx="22" ry="11" fill="white" opacity="0.7"/>
+                        <ellipse cx="500" cy="35" rx="28" ry="14" fill="white" opacity="0.6"/>
+                        <ellipse cx="520" cy="30" rx="20" ry="10" fill="white" opacity="0.6"/>
                         
                         <!-- Ground -->
-                        <rect x="0" y="250" width="500" height="150" fill="#90EE90"/>
+                        <rect x="0" y="180" width="800" height="120" fill="#90EE90"/>
                         
                         <!-- Street -->
-                        <rect x="0" y="320" width="500" height="40" fill="#696969"/>
-                        <rect x="0" y="338" width="500" height="4" fill="#FFFF00"/>
+                        <rect x="0" y="240" width="800" height="30" fill="#696969"/>
+                        <rect x="0" y="253" width="800" height="3" fill="#FFFF00"/>
                         
                         <!-- Building 1 - Pizza Shop -->
-                        <rect x="50" y="180" width="80" height="70" fill="#FF6B6B"/>
-                        <rect x="60" y="190" width="15" height="20" fill="#87CEEB"/>
-                        <rect x="85" y="190" width="15" height="20" fill="#87CEEB"/>
-                        <rect x="110" y="190" width="15" height="20" fill="#87CEEB"/>
-                        <rect x="70" y="220" width="30" height="30" fill="#8B4513"/>
-                        <polygon points="50,180 90,150 130,180" fill="#FF1493"/>
-                        <text x="90" y="140" text-anchor="middle" fill="white" font-size="12" font-weight="bold">🍕 PIZZA</text>
+                        <rect x="80" y="130" width="70" height="50" fill="#FF6B6B"/>
+                        <rect x="88" y="138" width="12" height="15" fill="#87CEEB"/>
+                        <rect x="105" y="138" width="12" height="15" fill="#87CEEB"/>
+                        <rect x="122" y="138" width="12" height="15" fill="#87CEEB"/>
+                        <rect x="95" y="158" width="25" height="22" fill="#8B4513"/>
+                        <polygon points="80,130 115,110 150,130" fill="#FF1493"/>
+                        <text x="115" y="105" text-anchor="middle" fill="#4c1d95" font-size="10" font-weight="bold">🍕 PIZZA</text>
                         
                         <!-- Building 2 - Coffee Shop -->
-                        <rect x="150" y="190" width="70" height="60" fill="#4ECDC4"/>
-                        <rect x="160" y="200" width="12" height="18" fill="#87CEEB"/>
-                        <rect x="180" y="200" width="12" height="18" fill="#87CEEB"/>
-                        <rect x="200" y="200" width="12" height="18" fill="#87CEEB"/>
-                        <rect x="170" y="225" width="25" height="25" fill="#8B4513"/>
-                        <polygon points="150,190 185,165 220,190" fill="#9B59B6"/>
-                        <text x="185" y="155" text-anchor="middle" fill="white" font-size="10" font-weight="bold">☕ CAFÉ</text>
+                        <rect x="170" y="140" width="60" height="40" fill="#4ECDC4"/>
+                        <rect x="178" y="148" width="10" height="12" fill="#87CEEB"/>
+                        <rect x="192" y="148" width="10" height="12" fill="#87CEEB"/>
+                        <rect x="206" y="148" width="10" height="12" fill="#87CEEB"/>
+                        <rect x="185" y="165" width="20" height="15" fill="#8B4513"/>
+                        <polygon points="170,140 200,125 230,140" fill="#9B59B6"/>
+                        <text x="200" y="120" text-anchor="middle" fill="#4c1d95" font-size="9" font-weight="bold">☕ CAFÉ</text>
                         
                         <!-- Building 3 - Bookstore -->
-                        <rect x="240" y="175" width="75" height="75" fill="#F39C12"/>
-                        <rect x="250" y="185" width="14" height="22" fill="#87CEEB"/>
-                        <rect x="270" y="185" width="14" height="22" fill="#87CEEB"/>
-                        <rect x="290" y="185" width="14" height="22" fill="#87CEEB"/>
-                        <rect x="260" y="215" width="28" height="35" fill="#8B4513"/>
-                        <polygon points="240,175 277.5,145 315,175" fill="#E74C3C"/>
-                        <text x="277" y="135" text-anchor="middle" fill="white" font-size="10" font-weight="bold">📚 BOOKS</text>
+                        <rect x="250" y="125" width="65" height="55" fill="#F39C12"/>
+                        <rect x="258" y="133" width="12" height="16" fill="#87CEEB"/>
+                        <rect x="275" y="133" width="12" height="16" fill="#87CEEB"/>
+                        <rect x="292" y="133" width="12" height="16" fill="#87CEEB"/>
+                        <rect x="265" y="155" width="24" height="25" fill="#8B4513"/>
+                        <polygon points="250,125 282.5,105 315,125" fill="#E74C3C"/>
+                        <text x="282" y="100" text-anchor="middle" fill="#4c1d95" font-size="9" font-weight="bold">📚 BOOKS</text>
                         
                         <!-- Building 4 - Flower Shop -->
-                        <rect x="330" y="185" width="65" height="65" fill="#FF69B4"/>
-                        <rect x="340" y="195" width="12" height="20" fill="#87CEEB"/>
-                        <rect x="360" y="195" width="12" height="20" fill="#87CEEB"/>
-                        <rect x="380" y="195" width="12" height="20" fill="#87CEEB"/>
-                        <rect x="350" y="220" width="25" height="30" fill="#8B4513"/>
-                        <polygon points="330,185 362.5,160 395,185" fill="#32CD32"/>
-                        <text x="362" y="150" text-anchor="middle" fill="white" font-size="9" font-weight="bold">🌸 FLOWERS</text>
+                        <rect x="335" y="135" width="55" height="45" fill="#FF69B4"/>
+                        <rect x="343" y="143" width="10" height="14" fill="#87CEEB"/>
+                        <rect x="358" y="143" width="10" height="14" fill="#87CEEB"/>
+                        <rect x="373" y="143" width="10" height="14" fill="#87CEEB"/>
+                        <rect x="350" y="162" width="20" height="18" fill="#8B4513"/>
+                        <polygon points="335,135 362.5,120 390,135" fill="#32CD32"/>
+                        <text x="362" y="115" text-anchor="middle" fill="#4c1d95" font-size="8" font-weight="bold">🌸 FLOWERS</text>
                         
                         <!-- Building 5 - Bakery -->
-                        <rect x="410" y="195" width="60" height="55" fill="#DDA0DD"/>
-                        <rect x="420" y="205" width="10" height="16" fill="#87CEEB"/>
-                        <rect x="435" y="205" width="10" height="16" fill="#87CEEB"/>
-                        <rect x="450" y="205" width="10" height="16" fill="#87CEEB"/>
-                        <rect x="430" y="230" width="20" height="20" fill="#8B4513"/>
-                        <polygon points="410,195 440,175 470,195" fill="#FFD700"/>
-                        <text x="440" y="165" text-anchor="middle" fill="white" font-size="9" font-weight="bold">🥖 BAKERY</text>
+                        <rect x="410" y="145" width="50" height="35" fill="#DDA0DD"/>
+                        <rect x="418" y="153" width="8" height="12" fill="#87CEEB"/>
+                        <rect x="430" y="153" width="8" height="12" fill="#87CEEB"/>
+                        <rect x="442" y="153" width="8" height="12" fill="#87CEEB"/>
+                        <rect x="425" y="168" width="16" height="12" fill="#8B4513"/>
+                        <polygon points="410,145 435,130 460,145" fill="#FFD700"/>
+                        <text x="435" y="125" text-anchor="middle" fill="#4c1d95" font-size="8" font-weight="bold">🥖 BAKERY</text>
                         
-                        <!-- Trees -->
-                        <circle cx="30" cy="240" r="20" fill="#228B22"/>
-                        <rect x="28" y="240" width="4" height="25" fill="#8B4513"/>
+                        <!-- Building 6 - New Shop -->
+                        <rect x="480" y="140" width="55" height="40" fill="#9370DB"/>
+                        <rect x="488" y="148" width="10" height="12" fill="#87CEEB"/>
+                        <rect x="503" y="148" width="10" height="12" fill="#87CEEB"/>
+                        <rect x="518" y="148" width="10" height="12" fill="#87CEEB"/>
+                        <rect x="495" y="165" width="18" height="15" fill="#8B4513"/>
+                        <polygon points="480,140 507.5,125 535,140" fill="#FF6347"/>
+                        <text x="507" y="120" text-anchor="middle" fill="#4c1d95" font-size="8" font-weight="bold">🛍️ SHOP</text>
                         
-                        <circle cx="480" cy="235" r="18" fill="#228B22"/>
-                        <rect x="478" y="235" width="4" height="22" fill="#8B4513"/>
+                        <!-- Building 7 - Gym -->
+                        <rect x="555" y="135" width="60" height="45" fill="#32CD32"/>
+                        <rect x="563" y="143" width="11" height="14" fill="#87CEEB"/>
+                        <rect x="579" y="143" width="11" height="14" fill="#87CEEB"/>
+                        <rect x="595" y="143" width="11" height="14" fill="#87CEEB"/>
+                        <rect x="572" y="162" width="22" height="18" fill="#8B4513"/>
+                        <polygon points="555,135 585,120 615,135" fill="#FF4500"/>
+                        <text x="585" y="115" text-anchor="middle" fill="#4c1d95" font-size="8" font-weight="bold">💪 GYM</text>
                         
-                        <!-- Roller Skater -->
-                        <g transform="translate(200,290)">
-                            <!-- Body -->
-                            <ellipse cx="0" cy="0" rx="8" ry="12" fill="#FF1493"/>
-                            <!-- Head -->
-                            <circle cx="0" cy="-18" r="6" fill="#FDBCB4"/>
-                            <!-- Hair -->
-                            <path d="M -6,-24 Q 0,-30 6,-24" fill="#FFD700"/>
-                            <!-- Arms -->
-                            <ellipse cx="-12" cy="-5" rx="3" ry="8" fill="#FDBCB4" transform="rotate(-20)"/>
-                            <ellipse cx="12" cy="-5" rx="3" ry="8" fill="#FDBCB4" transform="rotate(20)"/>
-                            <!-- Legs -->
-                            <ellipse cx="-6" cy="15" rx="3" ry="10" fill="#4169E1"/>
-                            <ellipse cx="6" cy="15" rx="3" ry="10" fill="#4169E1"/>
-                            <!-- Roller Skates -->
-                            <ellipse cx="-6" cy="28" rx="8" ry="4" fill="#FF6347"/>
-                            <ellipse cx="6" cy="28" rx="8" ry="4" fill="#FF6347"/>
+                        <!-- Background Trees -->
+                        <circle cx="40" cy="170" r="15" fill="#228B22"/>
+                        <rect x="38" y="170" width="4" height="18" fill="#8B4513"/>
+                        
+                        <circle cx="680" cy="165" r="12" fill="#228B22"/>
+                        <rect x="678" y="165" width="4" height="15" fill="#8B4513"/>
+                        
+                        <circle cx="750" cy="168" r="14" fill="#228B22"/>
+                        <rect x="748" y="168" width="4" height="17" fill="#8B4513"/>
+                        
+                        <!-- Car -->
+                        <g transform="translate(300,220)">
+                            <!-- Car body -->
+                            <rect x="0" y="0" width="45" height="15" rx="3" fill="#FF6347"/>
+                            <!-- Car top -->
+                            <rect x="8" y="-8" width="25" height="8" rx="2" fill="#FF4500"/>
+                            <!-- Windows -->
+                            <rect x="10" y="-6" width="8" height="6" fill="#87CEEB" opacity="0.7"/>
+                            <rect x="20" y="-6" width="8" height="6" fill="#87CEEB" opacity="0.7"/>
                             <!-- Wheels -->
-                            <circle cx="-10" cy="30" r="2" fill="#FFD700"/>
-                            <circle cx="-2" cy="30" r="2" fill="#FFD700"/>
-                            <circle cx="2" cy="30" r="2" fill="#FFD700"/>
-                            <circle cx="10" cy="30" r="2" fill="#FFD700"/>
+                            <circle cx="8" cy="18" r="4" fill="#2F4F4F"/>
+                            <circle cx="37" cy="18" r="4" fill="#2F4F4F"/>
+                            <circle cx="8" cy="18" r="2" fill="#C0C0C0"/>
+                            <circle cx="37" cy="18" r="2" fill="#C0C0C0"/>
+                        </g>
+                        
+                        <!-- Fire Hydrant -->
+                        <g transform="translate(150,225)">
+                            <!-- Base -->
+                            <rect x="0" y="10" width="8" height="15" fill="#FF0000"/>
+                            <!-- Top -->
+                            <rect x="-1" y="8" width="10" height="4" fill="#FF0000"/>
+                            <!-- Cap -->
+                            <rect x="1" y="6" width="6" height="3" fill="#FFD700"/>
+                            <!-- Side outlets -->
+                            <rect x="-2" y="12" width="3" height="2" fill="#C0C0C0"/>
+                            <rect x="7" y="12" width="3" height="2" fill="#C0C0C0"/>
+                        </g>
+                        
+                        <!-- Dog Walker -->
+                        <g transform="translate(450,210)">
+                            <!-- Person -->
+                            <circle cx="0" cy="-12" r="4" fill="#FDBCB4"/>
+                            <ellipse cx="0" cy="-4" rx="5" ry="8" fill="#4169E1"/>
+                            <ellipse cx="-8" cy="-6" rx="2" ry="6" fill="#FDBCB4" transform="rotate(-15)"/>
+                            <ellipse cx="8" cy="-6" rx="2" ry="6" fill="#FDBCB4" transform="rotate(15)"/>
+                            <ellipse cx="-3" cy="8" rx="2" ry="8" fill="#4169E1"/>
+                            <ellipse cx="3" cy="8" rx="2" ry="8" fill="#4169E1"/>
+                            <!-- Dog -->
+                            <ellipse cx="15" cy="8" rx="6" ry="4" fill="#8B4513"/>
+                            <circle cx="20" cy="6" r="3" fill="#8B4513"/>
+                            <ellipse cx="22" cy="5" rx="1" ry="2" fill="#8B4513"/>
+                            <ellipse cx="22" cy="3" rx="1" ry="2" fill="#8B4513"/>
+                            <rect x="9" y="10" width="1" height="4" fill="#8B4513"/>
+                            <rect x="12" y="10" width="1" height="4" fill="#8B4513"/>
+                            <rect x="18" y="10" width="1" height="4" fill="#8B4513"/>
+                            <rect x="21" y="10" width="1" height="4" fill="#8B4513"/>
+                            <!-- Leash -->
+                            <path d="M 6,-2 Q 12,2 15,6" stroke="#000000" stroke-width="1" fill="none"/>
+                        </g>
+                        
+                        <!-- Roller Skater (repositioned) -->
+                        <g transform="translate(550,215)">
+                            <!-- Body -->
+                            <ellipse cx="0" cy="0" rx="6" ry="9" fill="#FF1493"/>
+                            <!-- Head -->
+                            <circle cx="0" cy="-12" r="4" fill="#FDBCB4"/>
+                            <!-- Hair -->
+                            <path d="M -4,-16 Q 0,-20 4,-16" fill="#FFD700"/>
+                            <!-- Arms -->
+                            <ellipse cx="-8" cy="-3" rx="2" ry="6" fill="#FDBCB4" transform="rotate(-20)"/>
+                            <ellipse cx="8" cy="-3" rx="2" ry="6" fill="#FDBCB4" transform="rotate(20)"/>
+                            <!-- Legs -->
+                            <ellipse cx="-4" cy="12" rx="2" ry="8" fill="#4169E1"/>
+                            <ellipse cx="4" cy="12" rx="2" ry="8" fill="#4169E1"/>
+                            <!-- Roller Skates -->
+                            <ellipse cx="-4" cy="22" rx="6" ry="3" fill="#FF6347"/>
+                            <ellipse cx="4" cy="22" rx="6" ry="3" fill="#FF6347"/>
+                            <!-- Wheels -->
+                            <circle cx="-7" cy="24" r="1.5" fill="#FFD700"/>
+                            <circle cx="-1" cy="24" r="1.5" fill="#FFD700"/>
+                            <circle cx="1" cy="24" r="1.5" fill="#FFD700"/>
+                            <circle cx="7" cy="24" r="1.5" fill="#FFD700"/>
                         </g>
                         
                         <!-- Motion lines -->
-                        <path d="M 180,295 Q 175,290 170,295" stroke="#FF1493" stroke-width="2" fill="none" opacity="0.6"/>
-                        <path d="M 175,300 Q 170,295 165,300" stroke="#FF1493" stroke-width="2" fill="none" opacity="0.4"/>
+                        <path d="M 540,220 Q 535,215 530,220" stroke="#FF1493" stroke-width="1" fill="none" opacity="0.6"/>
+                        <path d="M 535,225 Q 530,220 525,225" stroke="#FF1493" stroke-width="1" fill="none" opacity="0.4"/>
                         
                         <!-- Street lamp -->
-                        <rect x="120" y="260" width="3" height="60" fill="#2F4F4F"/>
-                        <circle cx="121.5" cy="255" r="8" fill="#FFD700" opacity="0.8"/>
+                        <rect x="200" y="185" width="2" height="40" fill="#2F4F4F"/>
+                        <circle cx="201" y="182" r="6" fill="#FFD700" opacity="0.8"/>
+                        
+                        <!-- Foreground Tree (Large) -->
+                        <g transform="translate(20,200)">
+                            <rect x="0" y="0" width="8" height="30" fill="#8B4513"/>
+                            <circle cx="4" cy="-5" r="18" fill="#228B22"/>
+                            <circle cx="-8" cy="-8" r="12" fill="#228B22"/>
+                            <circle cx="16" cy="-10" r="14" fill="#228B22"/>
+                            <circle cx="4" cy="-20" r="15" fill="#228B22"/>
+                        </g>
                         
                         <!-- Retro style decorative elements -->
                         <circle cx="50" cy="50" r="3" fill="#FF69B4" opacity="0.7"/>
@@ -196,43 +280,40 @@
                             <polygon points="420,130 422,135 427,135 423,138 425,143 420,140 415,143 417,138 413,135 418,135" />
                         </g>
                     </svg>
-                </div>
-            </div>
-
-        </main>
+        </div>
 
         <!-- Features Section -->
-        <section class="py-16 bg-white/5 backdrop-blur-sm">
+        <section class="py-16 bg-gradient-to-br from-slate-800 via-blue-900 to-indigo-900">
             <div class="container mx-auto px-6">
-                <h2 class="text-4xl font-bold text-white text-center mb-12">
+                <h2 class="text-4xl font-bold text-gray-200 text-center mb-12">
                     Why Our Directory Rocks! 🎉
                 </h2>
                 <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
                     <div class="bg-white/10 backdrop-blur-md rounded-xl p-8 text-center hover:bg-white/20 transition-all duration-300 hover:scale-105">
                         <div class="text-5xl mb-4">🏪</div>
-                        <h3 class="text-xl font-bold text-white mb-3">Local Businesses</h3>
-                        <p class="text-purple-100 leading-relaxed">Discover amazing shops, restaurants, and services right in your neighborhood!</p>
+                        <h3 class="text-xl font-bold text-gray-200 mb-3">Local Businesses</h3>
+                        <p class="text-gray-300 leading-relaxed">Discover amazing shops, restaurants, and services right in your neighborhood!</p>
                     </div>
                     <div class="bg-white/10 backdrop-blur-md rounded-xl p-8 text-center hover:bg-white/20 transition-all duration-300 hover:scale-105">
                         <div class="text-5xl mb-4">⭐</div>
-                        <h3 class="text-xl font-bold text-white mb-3">Verified Quality</h3>
-                        <p class="text-purple-100 leading-relaxed">All businesses are carefully reviewed to ensure you get the best experience!</p>
+                        <h3 class="text-xl font-bold text-gray-200 mb-3">Verified Quality</h3>
+                        <p class="text-gray-300 leading-relaxed">All businesses are carefully reviewed to ensure you get the best experience!</p>
                     </div>
                     <div class="bg-white/10 backdrop-blur-md rounded-xl p-8 text-center hover:bg-white/20 transition-all duration-300 hover:scale-105">
                         <div class="text-5xl mb-4">🚀</div>
-                        <h3 class="text-xl font-bold text-white mb-3">Easy to Use</h3>
-                        <p class="text-purple-100 leading-relaxed">Simple, fast, and fun way to explore what your community has to offer!</p>
+                        <h3 class="text-xl font-bold text-gray-200 mb-3">Easy to Use</h3>
+                        <p class="text-gray-300 leading-relaxed">Simple, fast, and fun way to explore what your community has to offer!</p>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- Call to Action Section -->
-        <section class="py-16">
+        <section class="py-16 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
             <div class="container mx-auto px-6 text-center">
-                <div class="bg-gradient-to-r from-pink-500/20 to-yellow-400/20 backdrop-blur-md rounded-3xl p-12 max-w-3xl mx-auto border border-white/10">
-                    <h2 class="text-4xl font-bold text-white mb-6">Ready to Join the Fun? 🎊</h2>
-                    <p class="text-xl text-purple-100 mb-8 leading-relaxed">Whether you're looking for businesses or want to list your own, we've got you covered!</p>
+                <div class="bg-white/10 backdrop-blur-md rounded-3xl p-12 max-w-3xl mx-auto border border-white/20">
+                    <h2 class="text-4xl font-bold text-gray-200 mb-6">Ready to Join the Fun? 🎊</h2>
+                    <p class="text-xl text-gray-300 mb-8 leading-relaxed">Whether you're looking for businesses or want to list your own, we've got you covered!</p>
                     <div class="flex flex-col sm:flex-row gap-6 justify-center">
                         <a href="{{ route('businesses.index') }}" 
                            class="bg-yellow-400 hover:bg-yellow-300 text-purple-800 px-10 py-4 rounded-full font-bold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg">
@@ -244,18 +325,18 @@
                         </a>
                     </div>
                 </div>
-            </div>
+        </div>
                  </section>
 
         <!-- Footer -->
-        <footer class="mt-20 py-8 border-t border-white/20">
+        <footer class="py-12 bg-gradient-to-r from-gray-900 via-slate-800 to-gray-900 border-t border-white/10">
             <div class="container mx-auto px-6 text-center">
-                <p class="text-purple-200">
+                <p class="text-gray-300 text-lg">
                     Made with 💜 for awesome local communities | 
-                    <span class="text-yellow-300">{{ config('app.name', 'Awesome Business Directory') }}</span>
+                    <span class="text-yellow-400 font-semibold">{{ config('app.name', 'Awesome Business Directory') }}</span>
                 </p>
             </div>
         </footer>
     </div>
-</body>
+    </body>
 </html>

@@ -1,214 +1,331 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-3xl mx-auto">
-        <h1 class="text-3xl font-bold mb-8">Business Onboarding</h1>
-
-        @if(session('success'))
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                <span class="block sm:inline">{{ session('success') }}</span>
-            </div>
-        @endif
-
-        <form action="{{ route('business.store') }}" method="POST" class="space-y-6">
-            @csrf
-
-            <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-                <h2 class="text-xl font-semibold mb-4">Basic Information</h2>
+<!-- Hero Section with Gradient Background -->
+<div class="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-yellow-400">
+    <div class="container mx-auto px-4 py-12">
+        <div class="max-w-4xl mx-auto">
+            <!-- Fun Header -->
+            <div class="text-center mb-12">
+                <div class="text-8xl mb-4">🚀</div>
+                <h1 class="text-5xl font-bold text-white mb-4 leading-tight">
+                    Let's Get Your Business <br>
+                    <span class="bg-gradient-to-r from-yellow-300 to-pink-300 bg-clip-text text-transparent">
+                        On The Map! 🗺️
+                    </span>
+                </h1>
+                <p class="text-xl text-white/90 mb-8">
+                    Join our amazing community of local businesses and start connecting with your neighbors! ✨
+                </p>
                 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="business_name">
-                        Business Name *
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('business_name') border-red-500 @enderror"
-                        id="business_name" type="text" name="business_name" value="{{ old('business_name') }}" required>
-                    @error('business_name')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
-                </div>
 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="industry">
-                        Industry *
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('industry') border-red-500 @enderror"
-                        id="industry" type="text" name="industry" value="{{ old('industry') }}" required>
-                    @error('industry')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="business_type">
-                        Business Type *
-                    </label>
-                    <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('business_type') border-red-500 @enderror"
-                        id="business_type" name="business_type" required>
-                        <option value="">Select Business Type</option>
-                        <option value="LLC" {{ old('business_type') == 'LLC' ? 'selected' : '' }}>LLC</option>
-                        <option value="Corporation" {{ old('business_type') == 'Corporation' ? 'selected' : '' }}>Corporation</option>
-                        <option value="Sole Proprietorship" {{ old('business_type') == 'Sole Proprietorship' ? 'selected' : '' }}>Sole Proprietorship</option>
-                        <option value="Partnership" {{ old('business_type') == 'Partnership' ? 'selected' : '' }}>Partnership</option>
-                    </select>
-                    @error('business_type')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="description">
-                        Description *
-                    </label>
-                    <textarea class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('description') border-red-500 @enderror"
-                        id="description" name="description" rows="4" required>{{ old('description') }}</textarea>
-                    @error('description')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="tagline">
-                        Tagline
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        id="tagline" type="text" name="tagline" value="{{ old('tagline') }}">
-                </div>
             </div>
 
-            <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-                <h2 class="text-xl font-semibold mb-4">Contact Information</h2>
+            @if(session('success'))
+                <div class="bg-gradient-to-r from-green-400 to-emerald-500 text-white px-6 py-4 rounded-2xl relative mb-8 shadow-2xl backdrop-blur-sm border border-white/20" role="alert">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">🎉</span>
+                        <span class="font-medium">{{ session('success') }}</span>
+                    </div>
+                </div>
+            @endif
 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="primary_email">
-                        Primary Email *
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('primary_email') border-red-500 @enderror"
-                        id="primary_email" type="email" name="primary_email" value="{{ old('primary_email') }}" required>
-                    @error('primary_email')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
+            <form action="{{ route('business.store') }}" method="POST" class="space-y-8">
+                @csrf
+
+                <!-- Basic Information Section -->
+                <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-white/20 hover:bg-white/15 transition-all duration-300">
+                    <div class="flex items-center mb-6">
+                        <span class="text-4xl mr-4">🏪</span>
+                        <h2 class="text-3xl font-bold text-white">Tell Us About Your Amazing Business!</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="business_name">
+                                <span class="mr-2">✨</span>
+                                What's your business called? *
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('business_name') border-red-300 ring-4 ring-red-300/50 @enderror"
+                                id="business_name" type="text" name="business_name" value="{{ old('business_name') }}" 
+                                placeholder="e.g., Joe's Amazing Pizza Palace" required>
+                            @error('business_name')
+                                <p class="text-red-200 text-sm font-medium flex items-center">
+                                    <span class="mr-1">⚠️</span> {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="industry">
+                                <span class="mr-2">🎯</span>
+                                What industry are you in? *
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('industry') border-red-300 ring-4 ring-red-300/50 @enderror"
+                                id="industry" type="text" name="industry" value="{{ old('industry') }}" 
+                                placeholder="e.g., Restaurant, Retail, Services" required>
+                            @error('industry')
+                                <p class="text-red-200 text-sm font-medium flex items-center">
+                                    <span class="mr-1">⚠️</span> {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="business_type">
+                                <span class="mr-2">🏢</span>
+                                Business Structure *
+                            </label>
+                            <select class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('business_type') border-red-300 ring-4 ring-red-300/50 @enderror"
+                                id="business_type" name="business_type" required>
+                                <option value="" class="text-gray-800">Choose your business type...</option>
+                                <option value="LLC" class="text-gray-800" {{ old('business_type') == 'LLC' ? 'selected' : '' }}>LLC</option>
+                                <option value="Corporation" class="text-gray-800" {{ old('business_type') == 'Corporation' ? 'selected' : '' }}>Corporation</option>
+                                <option value="Sole Proprietorship" class="text-gray-800" {{ old('business_type') == 'Sole Proprietorship' ? 'selected' : '' }}>Sole Proprietorship</option>
+                                <option value="Partnership" class="text-gray-800" {{ old('business_type') == 'Partnership' ? 'selected' : '' }}>Partnership</option>
+                            </select>
+                            @error('business_type')
+                                <p class="text-red-200 text-sm font-medium flex items-center">
+                                    <span class="mr-1">⚠️</span> {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="tagline">
+                                <span class="mr-2">💫</span>
+                                Your Catchy Tagline
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300"
+                                id="tagline" type="text" name="tagline" value="{{ old('tagline') }}"
+                                placeholder="e.g., Where flavor meets passion!">
+                        </div>
+                    </div>
+
+                    <div class="mt-6 space-y-2">
+                        <label class="flex items-center text-white font-semibold text-lg" for="description">
+                            <span class="mr-2">📝</span>
+                            Tell everyone what makes your business special! *
+                        </label>
+                        <textarea class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('description') border-red-300 ring-4 ring-red-300/50 @enderror"
+                            id="description" name="description" rows="4" required
+                            placeholder="Share your story, what you offer, and what makes your business unique...">{{ old('description') }}</textarea>
+                        @error('description')
+                            <p class="text-red-200 text-sm font-medium flex items-center">
+                                <span class="mr-1">⚠️</span> {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="phone_number">
-                        Phone Number *
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('phone_number') border-red-500 @enderror"
-                        id="phone_number" type="tel" name="phone_number" value="{{ old('phone_number') }}" required>
-                    @error('phone_number')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
+                <!-- Contact Information Section -->
+                <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-white/20 hover:bg-white/15 transition-all duration-300">
+                    <div class="flex items-center mb-6">
+                        <span class="text-4xl mr-4">📞</span>
+                        <h2 class="text-3xl font-bold text-white">How Can Customers Reach You?</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="primary_email">
+                                <span class="mr-2">✉️</span>
+                                Business Email *
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('primary_email') border-red-300 ring-4 ring-red-300/50 @enderror"
+                                id="primary_email" type="email" name="primary_email" value="{{ old('primary_email') }}" 
+                                placeholder="hello@yourbusiness.com" required>
+                            @error('primary_email')
+                                <p class="text-red-200 text-sm font-medium flex items-center">
+                                    <span class="mr-1">⚠️</span> {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="phone_number">
+                                <span class="mr-2">📱</span>
+                                Phone Number *
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('phone_number') border-red-300 ring-4 ring-red-300/50 @enderror"
+                                id="phone_number" type="tel" name="phone_number" value="{{ old('phone_number') }}" 
+                                placeholder="(555) 123-4567" required>
+                            @error('phone_number')
+                                <p class="text-red-200 text-sm font-medium flex items-center">
+                                    <span class="mr-1">⚠️</span> {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <div class="space-y-2 md:col-span-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="website_url">
+                                <span class="mr-2">🌐</span>
+                                Website (Show off your online presence!)
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300"
+                                id="website_url" type="url" name="website_url" value="{{ old('website_url') }}"
+                                placeholder="https://www.yourawesomebusiness.com">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="website_url">
-                        Website URL
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        id="website_url" type="url" name="website_url" value="{{ old('website_url') }}">
-                </div>
-            </div>
+                <!-- Address Section -->
+                <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-white/20 hover:bg-white/15 transition-all duration-300">
+                    <div class="flex items-center mb-6">
+                        <span class="text-4xl mr-4">📍</span>
+                        <h2 class="text-3xl font-bold text-white">Where Can People Find You?</h2>
+                    </div>
 
-            <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-                <h2 class="text-xl font-semibold mb-4">Address</h2>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="space-y-2 md:col-span-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="street_address">
+                                <span class="mr-2">🏠</span>
+                                Street Address *
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('street_address') border-red-300 ring-4 ring-red-300/50 @enderror"
+                                id="street_address" type="text" name="street_address" value="{{ old('street_address') }}" 
+                                placeholder="123 Main Street" required>
+                            @error('street_address')
+                                <p class="text-red-200 text-sm font-medium flex items-center">
+                                    <span class="mr-1">⚠️</span> {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="street_address">
-                        Street Address *
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('street_address') border-red-500 @enderror"
-                        id="street_address" type="text" name="street_address" value="{{ old('street_address') }}" required>
-                    @error('street_address')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
-                </div>
+                        <div class="space-y-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="city">
+                                <span class="mr-2">🏙️</span>
+                                City *
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('city') border-red-300 ring-4 ring-red-300/50 @enderror"
+                                id="city" type="text" name="city" value="{{ old('city') }}" 
+                                placeholder="Your City" required>
+                            @error('city')
+                                <p class="text-red-200 text-sm font-medium flex items-center">
+                                    <span class="mr-1">⚠️</span> {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="city">
-                        City *
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('city') border-red-500 @enderror"
-                        id="city" type="text" name="city" value="{{ old('city') }}" required>
-                    @error('city')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
-                </div>
+                        <div class="space-y-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="state_province">
+                                <span class="mr-2">🗺️</span>
+                                State/Province *
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('state_province') border-red-300 ring-4 ring-red-300/50 @enderror"
+                                id="state_province" type="text" name="state_province" value="{{ old('state_province') }}" 
+                                placeholder="CA" required>
+                            @error('state_province')
+                                <p class="text-red-200 text-sm font-medium flex items-center">
+                                    <span class="mr-1">⚠️</span> {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="state_province">
-                        State/Province *
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('state_province') border-red-500 @enderror"
-                        id="state_province" type="text" name="state_province" value="{{ old('state_province') }}" required>
-                    @error('state_province')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
-                </div>
+                        <div class="space-y-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="postal_code">
+                                <span class="mr-2">📮</span>
+                                Postal Code *
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('postal_code') border-red-300 ring-4 ring-red-300/50 @enderror"
+                                id="postal_code" type="text" name="postal_code" value="{{ old('postal_code') }}" 
+                                placeholder="12345" required>
+                            @error('postal_code')
+                                <p class="text-red-200 text-sm font-medium flex items-center">
+                                    <span class="mr-1">⚠️</span> {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="postal_code">
-                        Postal Code *
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('postal_code') border-red-500 @enderror"
-                        id="postal_code" type="text" name="postal_code" value="{{ old('postal_code') }}" required>
-                    @error('postal_code')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="country">
-                        Country *
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('country') border-red-500 @enderror"
-                        id="country" type="text" name="country" value="{{ old('country') }}" required>
-                    @error('country')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-
-            <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-                <h2 class="text-xl font-semibold mb-4">Owner Information</h2>
-
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="owner_name">
-                        Owner Name *
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('owner_name') border-red-500 @enderror"
-                        id="owner_name" type="text" name="owner_name" value="{{ old('owner_name') }}" required>
-                    @error('owner_name')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="owner_email">
-                        Owner Email *
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('owner_email') border-red-500 @enderror"
-                        id="owner_email" type="email" name="owner_email" value="{{ old('owner_email') }}" required>
-                    @error('owner_email')
-                        <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                    @enderror
+                        <div class="space-y-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="country">
+                                <span class="mr-2">🌍</span>
+                                Country *
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('country') border-red-300 ring-4 ring-red-300/50 @enderror"
+                                id="country" type="text" name="country" value="{{ old('country') }}" 
+                                placeholder="United States" required>
+                            @error('country')
+                                <p class="text-red-200 text-sm font-medium flex items-center">
+                                    <span class="mr-1">⚠️</span> {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+                    </div>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="owner_phone">
-                        Owner Phone
-                    </label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        id="owner_phone" type="tel" name="owner_phone" value="{{ old('owner_phone') }}">
-                </div>
-            </div>
+                <!-- Owner Information Section -->
+                <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-white/20 hover:bg-white/15 transition-all duration-300">
+                    <div class="flex items-center mb-6">
+                        <span class="text-4xl mr-4">👤</span>
+                        <h2 class="text-3xl font-bold text-white">Tell Us About The Boss!</h2>
+                    </div>
 
-            <div class="flex items-center justify-end">
-                <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
-                    Submit Business
-                </button>
-            </div>
-        </form>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="owner_name">
+                                <span class="mr-2">🎭</span>
+                                Owner Name *
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('owner_name') border-red-300 ring-4 ring-red-300/50 @enderror"
+                                id="owner_name" type="text" name="owner_name" value="{{ old('owner_name') }}" 
+                                placeholder="John Doe" required>
+                            @error('owner_name')
+                                <p class="text-red-200 text-sm font-medium flex items-center">
+                                    <span class="mr-1">⚠️</span> {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="owner_email">
+                                <span class="mr-2">📧</span>
+                                Owner Email *
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300 @error('owner_email') border-red-300 ring-4 ring-red-300/50 @enderror"
+                                id="owner_email" type="email" name="owner_email" value="{{ old('owner_email') }}" 
+                                placeholder="john@business.com" required>
+                            @error('owner_email')
+                                <p class="text-red-200 text-sm font-medium flex items-center">
+                                    <span class="mr-1">⚠️</span> {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <div class="space-y-2 md:col-span-2">
+                            <label class="flex items-center text-white font-semibold text-lg" for="owner_phone">
+                                <span class="mr-2">📲</span>
+                                Owner Phone (Optional)
+                            </label>
+                            <input class="w-full py-4 px-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-800 placeholder-white/70 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 focus:bg-white/30 transition-all duration-300"
+                                id="owner_phone" type="tel" name="owner_phone" value="{{ old('owner_phone') }}"
+                                placeholder="(555) 987-6543">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Section -->
+                <div class="text-center py-8">
+                    <div class="mb-6">
+                        <p class="text-xl text-white/90 mb-4">
+                            🎉 Ready to join our amazing business community? 🎉
+                        </p>
+                        <p class="text-white/80">
+                            Click the button below and let's get your business discovered by your neighbors!
+                        </p>
+                    </div>
+                    
+                    <button class="group relative inline-flex items-center justify-center px-12 py-6 text-2xl font-bold text-purple-600 bg-gradient-to-r from-yellow-300 via-pink-300 to-yellow-300 rounded-full hover:from-yellow-400 hover:via-pink-400 hover:to-yellow-400 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-yellow-300/50" type="submit">
+                        <span class="mr-3 text-3xl group-hover:animate-bounce">🚀</span>
+                        Launch My Business!
+                        <span class="ml-3 text-3xl group-hover:animate-bounce">✨</span>
+                    </button>
+                    
+                    <p class="text-white/60 text-sm mt-4">
+                        Don't worry, you can always update your information later! 😊
+                    </p>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 @endsection

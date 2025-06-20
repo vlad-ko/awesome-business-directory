@@ -99,8 +99,8 @@ class BusinessListingTest extends TestCase
         $response = $this->get(route('businesses.index'));
 
         $response->assertStatus(200)
-            ->assertSee('No businesses found')
-            ->assertSee('Our directory is just getting started')
+            ->assertSee('No businesses yet!')
+            ->assertSee('directory is just getting started')
             ->assertSee('Add Your Business')
             ->assertSee('Why join our directory?');
     }

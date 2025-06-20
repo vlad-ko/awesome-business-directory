@@ -509,4 +509,180 @@ class BusinessLogger
             ]);
         });
     }
+
+    /**
+     * Track onboarding form UI interactions
+     */
+    public static function onboardingFormInteraction(string $interactionType, array $metadata = []): void
+    {
+        $data = [
+            'event' => 'onboarding_form_interaction',
+            'timestamp' => now()->toISOString(),
+            'interaction_type' => $interactionType, // 'section_focus', 'field_focus', 'validation_error_shown', 'emoji_hover'
+            'session_id' => session()->getId(),
+            'metadata' => $metadata,
+        ];
+
+        Log::info("Onboarding form interaction", $data);
+
+        // Track form UX for optimization
+        addBreadcrumb(
+            category: 'form.interaction',
+            message: "Form interaction: {$interactionType}",
+            metadata: $metadata
+        );
+
+        // Set form interaction context
+        configureScope(function (Scope $scope) use ($interactionType, $metadata): void {
+            $scope->setTag('form_interaction', $interactionType);
+            $scope->setContext('form_ux', [
+                'interaction' => $interactionType,
+                'metadata' => $metadata,
+                'form_type' => 'onboarding',
+            ]);
+        });
+    }
+
+    /**
+     * Track form completion progress and abandonment
+     */
+    public static function onboardingFormProgress(string $section, array $completionData = []): void
+    {
+        $data = [
+            'event' => 'onboarding_form_progress',
+            'timestamp' => now()->toISOString(),
+            'current_section' => $section, // 'basic_info', 'contact', 'address', 'owner'
+            'completion_percentage' => $completionData['completion_percentage'] ?? null,
+            'filled_fields' => $completionData['filled_fields'] ?? [],
+            'time_spent_ms' => $completionData['time_spent_ms'] ?? null,
+            'session_id' => session()->getId(),
+        ];
+
+        Log::info("Onboarding form progress tracked", $data);
+
+        // Track completion funnel
+        addBreadcrumb(
+            category: 'form.progress',
+            message: "Form progress: {$section}",
+            metadata: [
+                'section' => $section,
+                'completion_percentage' => $completionData['completion_percentage'] ?? 0,
+            ]
+        );
+
+        // Set progress context for abandonment analysis
+        configureScope(function (Scope $scope) use ($section, $completionData): void {
+            $scope->setTag('form_section', $section);
+            $scope->setTag('completion_stage', self::getCompletionStage($completionData['completion_percentage'] ?? 0));
+            $scope->setContext('form_progress', [
+                'current_section' => $section,
+                'completion_data' => $completionData,
+            ]);
+        });
+    }
+
+    /**
+     * Track form validation errors with enhanced context
+     */
+    public static function onboardingValidationError(string $fieldName, string $errorType, array $context = []): void
+    {
+        $data = [
+            'event' => 'onboarding_validation_error',
+            'timestamp' => now()->toISOString(),
+            'field_name' => $fieldName,
+            'error_type' => $errorType, // 'required', 'format', 'length', etc.
+            'field_section' => self::getFieldSection($fieldName),
+            'context' => $context,
+            'session_id' => session()->getId(),
+        ];
+
+        Log::warning("Onboarding validation error", $data);
+
+        // Track validation issues for UX improvement
+        addBreadcrumb(
+            category: 'form.validation',
+            message: "Validation error: {$fieldName} - {$errorType}",
+            metadata: [
+                'field' => $fieldName,
+                'error' => $errorType,
+                'section' => self::getFieldSection($fieldName),
+            ]
+        );
+
+        // Set validation context
+        configureScope(function (Scope $scope) use ($fieldName, $errorType): void {
+            $scope->setTag('validation_field', $fieldName);
+            $scope->setTag('validation_error', $errorType);
+            $scope->setContext('validation_error', [
+                'field' => $fieldName,
+                'error_type' => $errorType,
+                'section' => self::getFieldSection($fieldName),
+            ]);
+        });
+    }
+
+    /**
+     * Track UI performance metrics for the fun onboarding form
+     */
+    public static function onboardingUiPerformance(array $metrics): void
+    {
+        $data = [
+            'event' => 'onboarding_ui_performance',
+            'timestamp' => now()->toISOString(),
+            'form_render_time_ms' => $metrics['form_render_time_ms'] ?? null,
+            'animation_performance' => $metrics['animation_performance'] ?? null,
+            'gradient_render_time_ms' => $metrics['gradient_render_time_ms'] ?? null,
+            'emoji_load_time_ms' => $metrics['emoji_load_time_ms'] ?? null,
+            'backdrop_blur_performance' => $metrics['backdrop_blur_performance'] ?? null,
+            'session_id' => session()->getId(),
+        ];
+
+        Log::info("Onboarding UI performance metrics", $data);
+
+        // Track UI performance for optimization
+        if (($metrics['form_render_time_ms'] ?? 0) > 500) {
+            Log::warning("Slow onboarding form render detected", [
+                'render_time_ms' => $metrics['form_render_time_ms'],
+                'performance_impact' => 'high',
+            ]);
+        }
+
+        // Add performance breadcrumb
+        addBreadcrumb(
+            category: 'performance.ui',
+            message: 'Onboarding form UI performance tracked',
+            metadata: [
+                'render_time_ms' => $metrics['form_render_time_ms'] ?? 0,
+                'performance_grade' => self::getPerformanceGrade($metrics['form_render_time_ms'] ?? 0),
+            ]
+        );
+    }
+
+    /**
+     * Helper method to determine completion stage
+     */
+    private static function getCompletionStage(float $percentage): string
+    {
+        return match (true) {
+            $percentage >= 90 => 'near_complete',
+            $percentage >= 75 => 'mostly_complete',
+            $percentage >= 50 => 'half_complete',
+            $percentage >= 25 => 'quarter_complete',
+            default => 'just_started'
+        };
+    }
+
+    /**
+     * Helper method to map field names to form sections
+     */
+    private static function getFieldSection(string $fieldName): string
+    {
+        return match ($fieldName) {
+            'business_name', 'industry', 'business_type', 'description', 'tagline' => 'basic_info',
+            'primary_email', 'phone_number', 'website_url' => 'contact',
+            'street_address', 'city', 'state_province', 'postal_code', 'country' => 'address',
+            'owner_name', 'owner_email', 'owner_phone' => 'owner',
+            default => 'unknown'
+        };
+    }
 } 

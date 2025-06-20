@@ -116,8 +116,8 @@ class WelcomePageTest extends TestCase
         $response = $this->get('/');
 
         // Check for SVG elements that make up our neighborhood illustration
-        $response->assertSee('<svg width="100%" height="400"', false);
-        $response->assertSee('viewBox="0 0 500 400"', false);
+        $response->assertSee('<svg width="100%" height="300"', false);
+        $response->assertSee('viewBox="0 0 800 300"', false);
         
         // Check for specific SVG content (buildings, roller skater, etc.)
         $response->assertSee('🍕 PIZZA', false);
@@ -163,7 +163,7 @@ class WelcomePageTest extends TestCase
         // Check for responsive classes
         $response->assertSee('md:grid-cols-3');
         $response->assertSee('sm:flex-row');
-        $response->assertSee('lg:text-7xl');
+        $response->assertSee('lg:text-4xl');
         $response->assertSee('max-w-2xl');
     }
 

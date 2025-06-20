@@ -11,6 +11,8 @@ class BusinessOnboardingController extends Controller
 {
     public function create(Request $request)
     {
+        $startTime = microtime(true);
+
         // Track if user came from welcome page CTA
         $referrer = $request->header('referer');
         if ($referrer && str_contains($referrer, request()->getSchemeAndHttpHost())) {
@@ -23,7 +25,17 @@ class BusinessOnboardingController extends Controller
         // Log that someone started the onboarding process
         BusinessLogger::onboardingStarted($request);
 
-        return view('onboarding.create');
+        // Track UI performance for the fun form
+        $response = response()->view('onboarding.create');
+        $renderTime = (microtime(true) - $startTime) * 1000;
+        
+        BusinessLogger::onboardingUiPerformance([
+            'form_render_time_ms' => $renderTime,
+            'has_referrer' => !empty($referrer),
+            'source_page' => $path ?? 'direct',
+        ]);
+
+        return $response;
     }
 
     public function store(Request $request)
@@ -66,6 +78,19 @@ class BusinessOnboardingController extends Controller
                 'validation_status' => 'failed',
                 'error_count' => count($validator->errors())
             ]);
+            
+            // Enhanced validation error tracking for each field
+            foreach ($validator->errors()->toArray() as $field => $errors) {
+                foreach ($errors as $error) {
+                    $errorType = $this->determineErrorType($error);
+                    BusinessLogger::onboardingValidationError($field, $errorType, [
+                        'error_message' => $error,
+                        'field_value_length' => strlen($request->input($field, '')),
+                        'total_errors' => count($validator->errors()),
+                    ]);
+                }
+            }
+            
             BusinessLogger::validationFailed($validator->errors()->toArray(), $request);
             $transaction?->finish();
             return redirect()->back()
@@ -132,5 +157,21 @@ class BusinessOnboardingController extends Controller
                 ->with('error', 'Something went wrong. Please try again.')
                 ->withInput();
         }
+    }
+
+    /**
+     * Determine the type of validation error for better tracking
+     */
+    private function determineErrorType(string $errorMessage): string
+    {
+        return match (true) {
+            str_contains($errorMessage, 'required') => 'required',
+            str_contains($errorMessage, 'email') => 'invalid_email',
+            str_contains($errorMessage, 'max') => 'too_long',
+            str_contains($errorMessage, 'min') => 'too_short',
+            str_contains($errorMessage, 'string') => 'invalid_format',
+            str_contains($errorMessage, 'numeric') => 'invalid_number',
+            default => 'other'
+        };
     }
 }
