@@ -21,10 +21,11 @@ class BusinessLogger
 {
     /**
      * Send structured log to Sentry with enhanced context
+     * Uses both traditional Sentry (for Issues) and new Sentry Logs (for Logs tab)
      */
     private static function logToSentry(string $level, string $message, array $data, array $tags = [], array $context = []): void
     {
-        // Send to structured log channel (includes Sentry)
+        // Send to structured log channel (includes Sentry Logs)
         Log::channel('structured')->{$level}($message, $data);
 
         // Enhance Sentry context
@@ -62,8 +63,9 @@ class BusinessLogger
             }
         });
 
-        // Send direct message to Sentry for important events
-        if (in_array($level, ['warning', 'error', 'critical'])) {
+        // Send critical events to both Logs tab and Issues tab
+        if (in_array($level, ['error', 'critical'])) {
+            // Send to traditional Sentry (Issues tab) for alerting
             captureMessage($message, self::getSentryLevel($level));
         }
     }

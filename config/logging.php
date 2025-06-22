@@ -134,9 +134,16 @@ return [
             'name' => 'business-directory',
         ],
 
+        'sentry_logs' => [
+            'driver' => 'sentry_logs',
+            'level' => 'info',
+            'bubble' => true,
+            'name' => 'business-directory-logs',
+        ],
+
         'structured' => [
             'driver' => 'stack',
-            'channels' => ['single', 'sentry'],
+            'channels' => ['single', 'sentry_logs'], // Changed from 'sentry' to 'sentry_logs'
             'name' => 'structured-logs',
         ],
 
