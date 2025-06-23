@@ -55,6 +55,19 @@ class BusinessOnboardingController extends Controller
 
         $startTime = microtime(true);
 
+        // Set journey start time for step 1
+        if ($step === 1 && !session()->has('onboarding_journey_start_time')) {
+            session(['onboarding_journey_start_time' => $startTime]);
+        }
+
+        // Log multi-step step started with enhanced context
+        BusinessLogger::multiStepStepStarted($step, [
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'referrer' => $request->header('referer'),
+            'start_time' => $startTime,
+        ]);
+
         // Start transaction for step viewing
         $transaction = BusinessLogger::startBusinessTransaction("onboarding_step_{$step}", [
             'step_number' => $step,
@@ -132,6 +145,9 @@ class BusinessOnboardingController extends Controller
                 'error_count' => count($validator->errors())
             ]);
 
+            // Log multi-step validation errors
+            BusinessLogger::multiStepValidationError($step, $validator->errors()->toArray(), $request->all());
+
             // Log validation errors for each field
             foreach ($validator->errors()->toArray() as $field => $errors) {
                 foreach ($errors as $error) {
@@ -163,6 +179,9 @@ class BusinessOnboardingController extends Controller
 
         // Log successful step completion
         $processingTime = (microtime(true) - $startTime) * 1000;
+        
+        // Log multi-step step completion
+        BusinessLogger::multiStepStepCompleted($step, $validatedData, $processingTime);
         
         BusinessLogger::onboardingFormProgress("step_{$step}_completed", [
             'step_number' => $step,
@@ -201,9 +220,19 @@ class BusinessOnboardingController extends Controller
 
         // Gather all step data
         $allData = [];
+        $allStepData = [];
         for ($i = 1; $i <= count(self::STEPS); $i++) {
-            $allData = array_merge($allData, session("onboarding_step_{$i}", []));
+            $stepData = session("onboarding_step_{$i}", []);
+            $allData = array_merge($allData, $stepData);
+            $allStepData["onboarding_step_{$i}"] = $stepData;
         }
+
+        // Calculate total journey time (if available)
+        $journeyStartTime = session('onboarding_journey_start_time', $startTime);
+        $totalJourneyTime = ($startTime - $journeyStartTime) * 1000;
+
+        // Log review page reached (high-intent event)
+        BusinessLogger::multiStepReviewReached($allStepData, $totalJourneyTime);
 
         // Start transaction for review page
         $transaction = BusinessLogger::startBusinessTransaction('onboarding_review', [
@@ -263,6 +292,21 @@ class BusinessOnboardingController extends Controller
 
             // Calculate processing time
             $processingTime = (microtime(true) - $startTime) * 1000;
+
+            // Calculate journey metrics
+            $journeyStartTime = session('onboarding_journey_start_time', $startTime);
+            $totalJourneyTime = ($startTime - $journeyStartTime) * 1000;
+            
+            $journeyMetrics = [
+                'total_time_ms' => $totalJourneyTime,
+                'processing_time_ms' => $processingTime,
+                'review_visited' => true,
+                'steps_completed' => count(self::STEPS),
+                'total_fields' => count($allData),
+            ];
+
+            // Log multi-step conversion completion
+            BusinessLogger::multiStepConversionCompleted($business, $journeyMetrics);
 
             // Log successful business creation
             BusinessLogger::businessCreated($business, $processingTime);
@@ -391,8 +435,10 @@ class BusinessOnboardingController extends Controller
     {
         for ($i = 1; $i <= count(self::STEPS); $i++) {
             session()->forget("onboarding_step_{$i}");
+            session()->forget("step_{$i}_error_attempts"); // Clear error attempt tracking
         }
         session()->forget('onboarding_progress');
+        session()->forget('onboarding_journey_start_time');
     }
     public function create(Request $request)
     {

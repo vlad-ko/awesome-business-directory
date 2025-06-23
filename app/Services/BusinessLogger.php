@@ -961,4 +961,426 @@ class BusinessLogger
             ]
         );
     }
+
+    /**
+     * Log multi-step onboarding step started event
+     */
+    public static function multiStepStepStarted(int $step, array $context = []): void
+    {
+        $progress = ($step / 4) * 100; // 4 total steps
+        $sessionData = session()->all();
+        $previousStepsCompleted = 0;
+        
+        // Count completed previous steps
+        for ($i = 1; $i < $step; $i++) {
+            if (session()->has("onboarding_step_{$i}")) {
+                $previousStepsCompleted++;
+            }
+        }
+        
+        $data = [
+            'event' => 'multi_step_onboarding_step_started',
+            'timestamp' => now()->toISOString(),
+            'step_number' => $step,
+            'progress_percentage' => $progress,
+            'previous_steps_completed' => $previousStepsCompleted,
+            'session_id' => session()->getId(),
+            'is_returning_user' => $previousStepsCompleted > 0,
+            'session_data_size' => count($sessionData),
+            'has_previous_step_data' => session()->has("onboarding_step_" . ($step - 1)),
+            'total_session_keys' => array_keys($sessionData),
+        ];
+
+        // Add context data
+        $data = array_merge($data, $context);
+
+        self::logToSentry(
+            level: 'info',
+            message: "Multi-step onboarding step {$step} started",
+            data: $data,
+            tags: [
+                'feature' => 'multi_step_onboarding',
+                'event_category' => 'step_progression',
+                'step_number' => (string)$step,
+                'progress_stage' => self::getProgressStage($progress),
+                'user_type' => $previousStepsCompleted > 0 ? 'returning' : 'new',
+            ],
+            context: [
+                'onboarding_funnel' => [
+                    'step' => $step,
+                    'progress_percentage' => $progress,
+                    'previous_steps_completed' => $previousStepsCompleted,
+                    'is_returning_user' => $previousStepsCompleted > 0,
+                ],
+            ]
+        );
+
+        // Add breadcrumb for step progression tracking
+        addBreadcrumb(
+            category: 'onboarding.step',
+            message: "Step {$step} started",
+            metadata: [
+                'step' => $step,
+                'progress' => $progress,
+                'previous_steps' => $previousStepsCompleted,
+            ]
+        );
+    }
+
+    /**
+     * Log multi-step onboarding step completed event
+     */
+    public static function multiStepStepCompleted(int $step, array $stepData = [], ?float $stepTimeMs = null): void
+    {
+        $progress = ($step / 4) * 100;
+        $nextStep = $step + 1;
+        
+        $data = [
+            'event' => 'multi_step_onboarding_step_completed',
+            'timestamp' => now()->toISOString(),
+            'step_number' => $step,
+            'progress_percentage' => $progress,
+            'next_step' => $nextStep <= 4 ? $nextStep : 'review',
+            'step_completion_time_ms' => $stepTimeMs,
+            'fields_completed' => count($stepData),
+            'field_names' => array_keys($stepData),
+            'session_id' => session()->getId(),
+            'step_data_size' => strlen(json_encode($stepData)),
+        ];
+
+        self::logToSentry(
+            level: 'info',
+            message: "Multi-step onboarding step {$step} completed",
+            data: $data,
+            tags: [
+                'feature' => 'multi_step_onboarding',
+                'event_category' => 'step_completion',
+                'step_number' => (string)$step,
+                'progress_stage' => self::getProgressStage($progress),
+                'completion_speed' => self::getCompletionSpeed($stepTimeMs),
+            ],
+            context: [
+                'step_completion' => [
+                    'step' => $step,
+                    'progress_percentage' => $progress,
+                    'completion_time_ms' => $stepTimeMs,
+                    'fields_count' => count($stepData),
+                    'next_step' => $nextStep <= 4 ? $nextStep : 'review',
+                ],
+            ]
+        );
+
+        // Add breadcrumb for step completion
+        addBreadcrumb(
+            category: 'onboarding.completion',
+            message: "Step {$step} completed",
+            metadata: [
+                'step' => $step,
+                'fields_count' => count($stepData),
+                'completion_time_ms' => $stepTimeMs,
+            ]
+        );
+    }
+
+    /**
+     * Log multi-step onboarding validation errors
+     */
+    public static function multiStepValidationError(int $step, array $errors, array $submittedData = []): void
+    {
+        $data = [
+            'event' => 'multi_step_onboarding_validation_error',
+            'timestamp' => now()->toISOString(),
+            'step_number' => $step,
+            'error_count' => count($errors),
+            'error_fields' => array_keys($errors),
+            'all_errors' => $errors,
+            'submitted_fields' => array_keys($submittedData),
+            'empty_fields' => array_keys(array_filter($submittedData, fn($value) => empty($value))),
+            'session_id' => session()->getId(),
+        ];
+
+        self::logToSentry(
+            level: 'warning',
+            message: "Multi-step onboarding step {$step} validation failed",
+            data: $data,
+            tags: [
+                'feature' => 'multi_step_onboarding',
+                'event_category' => 'validation_error',
+                'step_number' => (string)$step,
+                'error_severity' => count($errors) > 3 ? 'high' : 'low',
+            ],
+            context: [
+                'validation_failure' => [
+                    'step' => $step,
+                    'error_count' => count($errors),
+                    'error_fields' => array_keys($errors),
+                    'submitted_fields' => array_keys($submittedData),
+                ],
+            ]
+        );
+    }
+
+    /**
+     * Log review page reached (high-intent event)
+     */
+    public static function multiStepReviewReached(array $allStepData = [], ?float $totalJourneyTimeMs = null): void
+    {
+        $totalFields = 0;
+        $completedSteps = 0;
+        
+        foreach ($allStepData as $stepKey => $stepData) {
+            if (is_array($stepData)) {
+                $totalFields += count($stepData);
+                $completedSteps++;
+            }
+        }
+
+        $data = [
+            'event' => 'multi_step_onboarding_review_reached',
+            'timestamp' => now()->toISOString(),
+            'completed_steps' => $completedSteps,
+            'total_fields_completed' => $totalFields,
+            'total_journey_time_ms' => $totalJourneyTimeMs,
+            'session_id' => session()->getId(),
+            'conversion_likelihood' => 'high', // Users who reach review are likely to convert
+            'step_data_keys' => array_keys($allStepData),
+        ];
+
+        self::logToSentry(
+            level: 'info',
+            message: 'Multi-step onboarding review page reached - high conversion intent',
+            data: $data,
+            tags: [
+                'feature' => 'multi_step_onboarding',
+                'event_category' => 'high_intent',
+                'funnel_stage' => 'review',
+                'conversion_likelihood' => 'high',
+            ],
+            context: [
+                'conversion_funnel' => [
+                    'stage' => 'review',
+                    'completed_steps' => $completedSteps,
+                    'total_fields' => $totalFields,
+                    'journey_time_ms' => $totalJourneyTimeMs,
+                    'likelihood' => 'high',
+                ],
+            ]
+        );
+
+        // High-value breadcrumb
+        addBreadcrumb(
+            category: 'onboarding.milestone',
+            message: 'Review page reached - high conversion intent',
+            metadata: [
+                'completed_steps' => $completedSteps,
+                'total_fields' => $totalFields,
+                'journey_time_ms' => $totalJourneyTimeMs,
+            ]
+        );
+    }
+
+    /**
+     * Log successful multi-step onboarding conversion
+     */
+    public static function multiStepConversionCompleted(Business $business, array $journeyMetrics = []): void
+    {
+        $data = [
+            'event' => 'multi_step_onboarding_conversion_completed',
+            'timestamp' => now()->toISOString(),
+            'business_id' => $business->id,
+            'business_name' => $business->business_name,
+            'industry' => $business->industry,
+            'business_type' => $business->business_type,
+            'session_id' => session()->getId(),
+            'conversion_status' => 'successful',
+            'total_journey_time_ms' => $journeyMetrics['total_time_ms'] ?? null,
+            'steps_completed' => 4,
+            'review_page_visited' => $journeyMetrics['review_visited'] ?? true,
+        ];
+
+        // Add journey metrics if provided
+        $data = array_merge($data, $journeyMetrics);
+
+        self::logToSentry(
+            level: 'info',
+            message: 'Multi-step onboarding conversion completed successfully',
+            data: $data,
+            tags: [
+                'feature' => 'multi_step_onboarding',
+                'event_category' => 'conversion',
+                'funnel_stage' => 'completed',
+                'business_industry' => $business->industry,
+                'business_type' => $business->business_type,
+                'conversion_status' => 'successful',
+            ],
+            context: [
+                'conversion_success' => [
+                    'business_id' => $business->id,
+                    'business_name' => $business->business_name,
+                    'industry' => $business->industry,
+                    'journey_metrics' => $journeyMetrics,
+                ],
+            ]
+        );
+
+        // Success breadcrumb
+        addBreadcrumb(
+            category: 'onboarding.success',
+            message: 'Multi-step onboarding conversion completed',
+            metadata: [
+                'business_id' => $business->id,
+                'business_name' => $business->business_name,
+                'industry' => $business->industry,
+            ]
+        );
+    }
+
+    /**
+     * Log step back navigation
+     */
+    public static function multiStepBackNavigation(int $fromStep, int $toStep, string $reason = 'edit'): void
+    {
+        $data = [
+            'event' => 'multi_step_onboarding_back_navigation',
+            'timestamp' => now()->toISOString(),
+            'from_step' => $fromStep,
+            'to_step' => $toStep,
+            'steps_back' => $fromStep - $toStep,
+            'navigation_reason' => $reason,
+            'session_id' => session()->getId(),
+        ];
+
+        self::logToSentry(
+            level: 'info',
+            message: "Multi-step onboarding back navigation from step {$fromStep} to step {$toStep}",
+            data: $data,
+            tags: [
+                'feature' => 'multi_step_onboarding',
+                'event_category' => 'navigation',
+                'navigation_type' => 'backward',
+                'navigation_reason' => $reason,
+            ],
+            context: [
+                'navigation_pattern' => [
+                    'from_step' => $fromStep,
+                    'to_step' => $toStep,
+                    'direction' => 'backward',
+                    'reason' => $reason,
+                ],
+            ]
+        );
+    }
+
+    /**
+     * Log potential step abandonment
+     */
+    public static function multiStepPotentialAbandonment(int $lastStep, array $sessionData = []): void
+    {
+        $completedFields = 0;
+        foreach ($sessionData as $key => $value) {
+            if (str_starts_with($key, 'onboarding_step_') && is_array($value)) {
+                $completedFields += count($value);
+            }
+        }
+
+        $data = [
+            'event' => 'multi_step_onboarding_potential_abandonment',
+            'timestamp' => now()->toISOString(),
+            'last_completed_step' => $lastStep,
+            'progress_percentage' => ($lastStep / 4) * 100,
+            'completed_fields_count' => $completedFields,
+            'session_id' => session()->getId(),
+            'abandonment_risk' => $lastStep === 1 ? 'high' : ($lastStep >= 3 ? 'low' : 'medium'),
+        ];
+
+        self::logToSentry(
+            level: 'warning',
+            message: "Multi-step onboarding potential abandonment detected at step {$lastStep}",
+            data: $data,
+            tags: [
+                'feature' => 'multi_step_onboarding',
+                'event_category' => 'abandonment_risk',
+                'abandonment_step' => (string)$lastStep,
+                'risk_level' => $data['abandonment_risk'],
+            ],
+            context: [
+                'abandonment_analysis' => [
+                    'last_step' => $lastStep,
+                    'progress_percentage' => ($lastStep / 4) * 100,
+                    'completed_fields' => $completedFields,
+                    'risk_level' => $data['abandonment_risk'],
+                ],
+            ]
+        );
+    }
+
+    /**
+     * Log error recovery patterns
+     */
+    public static function multiStepErrorRecovery(int $step, array $previousErrors, bool $recoverySuccessful): void
+    {
+        $data = [
+            'event' => 'multi_step_onboarding_error_recovery',
+            'timestamp' => now()->toISOString(),
+            'step_number' => $step,
+            'previous_error_count' => count($previousErrors),
+            'previous_error_fields' => array_keys($previousErrors),
+            'recovery_successful' => $recoverySuccessful,
+            'recovery_attempt_number' => session()->get("step_{$step}_error_attempts", 0) + 1,
+            'session_id' => session()->getId(),
+        ];
+
+        // Track recovery attempts
+        session()->put("step_{$step}_error_attempts", $data['recovery_attempt_number']);
+
+        self::logToSentry(
+            level: $recoverySuccessful ? 'info' : 'warning',
+            message: "Multi-step onboarding error recovery " . ($recoverySuccessful ? 'successful' : 'failed') . " on step {$step}",
+            data: $data,
+            tags: [
+                'feature' => 'multi_step_onboarding',
+                'event_category' => 'error_recovery',
+                'step_number' => (string)$step,
+                'recovery_status' => $recoverySuccessful ? 'successful' : 'failed',
+                'attempt_number' => (string)$data['recovery_attempt_number'],
+            ],
+            context: [
+                'error_recovery' => [
+                    'step' => $step,
+                    'previous_errors' => $previousErrors,
+                    'recovery_successful' => $recoverySuccessful,
+                    'attempt_number' => $data['recovery_attempt_number'],
+                ],
+            ]
+        );
+    }
+
+    /**
+     * Get progress stage label
+     */
+    private static function getProgressStage(float $percentage): string
+    {
+        return match (true) {
+            $percentage <= 25 => 'early',
+            $percentage <= 50 => 'mid_early',
+            $percentage <= 75 => 'mid_late',
+            $percentage <= 100 => 'late',
+            default => 'complete',
+        };
+    }
+
+    /**
+     * Get completion speed classification
+     */
+    private static function getCompletionSpeed(?float $timeMs): string
+    {
+        if ($timeMs === null) return 'unknown';
+        
+        return match (true) {
+            $timeMs < 30000 => 'fast',      // Under 30 seconds
+            $timeMs < 120000 => 'normal',   // Under 2 minutes
+            $timeMs < 300000 => 'slow',     // Under 5 minutes
+            default => 'very_slow',         // Over 5 minutes
+        };
+    }
 } 

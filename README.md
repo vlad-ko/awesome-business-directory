@@ -14,6 +14,8 @@ This application provides a complete business directory platform where companies
 ### ✨ Key Features
 - ✅ **Multi-Step Business Onboarding** - User-friendly 4-step form with progress tracking
 - ✅ **Progressive Form UX** - Reduces cognitive load with session-based step management
+- ✅ **Comprehensive Analytics Logging** - **NEW** - Complete user journey tracking with Sentry
+- ✅ **Funnel Analysis & Metrics** - **NEW** - Step-by-step conversion tracking and timing
 - ✅ **Business Directory** - Professional listing with featured/verified badges
 - ✅ **Individual Business Pages** - Detailed profiles with slug-based SEO-friendly URLs
 - ✅ **Admin Authentication** - Secure role-based access control system
@@ -22,7 +24,7 @@ This application provides a complete business directory platform where companies
 - ✅ **Featured & Verified System** - Premium placement and trust indicators
 - ✅ **Empty State Handling** - Engaging call-to-action when no businesses exist
 - ✅ **Responsive Design** - Mobile-first approach with Tailwind CSS
-- ✅ **Comprehensive Testing** - Full TDD coverage with 102 tests (401 assertions)
+- ✅ **Comprehensive Testing** - Full TDD coverage with 111 tests (437 assertions)
 - ✅ **Advanced Monitoring** - Sentry.io integration with custom performance tracking
 - ✅ **Rich Business Data** - 35+ fields including hours, services, social media
 - ✅ **Backward Compatibility** - Legacy routes automatically redirect to new flow
@@ -34,6 +36,7 @@ This application provides a complete business directory platform where companies
 - **Tailwind CSS** for responsive, modern UI
 - **Sentry.io Integration** with 100% tracing for development
 - **Structured Logging** with BusinessLogger service
+- **Multi-Step Analytics** with comprehensive user journey tracking **NEW**
 - **Custom Performance Monitoring** with transaction traces and spans
 
 ## 🧪 Development Approach: Test-Driven Development (TDD)
@@ -406,7 +409,7 @@ Submit a new business for onboarding.
 - [x] **Business Status Management** - Pending/Approved/Rejected workflow
 - [x] **Featured & Verified System** - Premium placement and trust indicators
 - [x] **Comprehensive Database Schema** - 35+ fields with proper indexing
-- [x] **Full TDD Implementation** - 45 tests with 202 assertions
+- [x] **Full TDD Implementation** - 111 tests with 437 assertions
 - [x] **Sentry Integration** - Advanced monitoring with custom metrics
 - [x] **Responsive UI/UX** - Professional design with Tailwind CSS
 
@@ -544,7 +547,7 @@ For issues and questions:
 **Built with ❤️ using Laravel + TDD**
 
 ### Project Highlights
-- 🧪 **13 comprehensive tests** with full TDD methodology
+- 🧪 **111 comprehensive tests** with full TDD methodology
 - 🎨 **Professional UI/UX** with responsive design and engaging empty states
 - 🏗️ **Clean architecture** with Eloquent scopes and organized controllers
 - 📚 **Extensive documentation** covering implementation journey and troubleshooting
@@ -578,9 +581,30 @@ Key features:
 - **Performance Correlation**: Link log events directly to transaction performance data
 - **Intelligent Alerting**: Critical events trigger immediate notifications in Issues tab
 
-#### Enhanced Logging Capabilities
+#### Enhanced Multi-Step Logging Capabilities (NEW)
 
 ```php
+// Multi-step onboarding journey tracking
+BusinessLogger::multiStepStepStarted($step, [
+    'ip_address' => $request->ip(),
+    'user_agent' => $request->userAgent(),
+    'referrer' => $request->header('referer'),
+]);
+
+// Step completion with performance metrics
+BusinessLogger::multiStepStepCompleted($step, $stepData, $processingTimeMs);
+
+// Comprehensive conversion tracking
+BusinessLogger::multiStepConversionCompleted($business, [
+    'total_journey_time_ms' => 45000,
+    'steps_completed' => 4,
+    'validation_errors_encountered' => 1,
+    'review_visited' => true,
+]);
+
+// Error recovery pattern analysis
+BusinessLogger::multiStepErrorRecovery($step, $previousErrors, $successful);
+
 // Critical business events with automatic alerting
 BusinessLogger::criticalBusinessEvent('payment_processor_down', [
     'processor' => 'stripe',
