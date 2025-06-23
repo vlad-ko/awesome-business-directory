@@ -12,7 +12,7 @@
                 Discover amazing businesses in our vibrant community! From cozy cafes to innovative startups, find your next favorite local spot. ✨
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="{{ route('business.onboard') }}" 
+                <a href="{{ route('business.onboard.step', 1) }}" 
                    class="bg-yellow-400 hover:bg-yellow-300 text-purple-800 px-8 py-4 rounded-full font-bold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg">
                     🚀 Add Your Business
                 </a>

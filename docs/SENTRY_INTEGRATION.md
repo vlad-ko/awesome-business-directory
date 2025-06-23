@@ -835,29 +835,35 @@ $transaction?->setData([
 
 ## Sentry Logs Integration
 
-### Current Status: ✅ **SENTRY LOGS FULLY IMPLEMENTED!**
+### Current Status: ✅ **SENTRY LOGS FULLY IMPLEMENTED AND OPERATIONAL!**
 
-**🎉 BREAKTHROUGH DISCOVERY**: The Sentry team **ALREADY IMPLEMENTED** Sentry Logs support for Laravel! Added in SDK v4.15.0 (June 12, 2025).
+**🎉 PRODUCTION-READY IMPLEMENTATION**: Sentry Logs is now fully integrated and operational in our Laravel application using the official `sentry_logs` driver from Sentry Laravel SDK v4.15.0+.
 
-**What this means:**
-- ✅ **NEW `sentry_logs` driver** available RIGHT NOW
-- ✅ **Dedicated Sentry Logs tab** fully functional  
-- ✅ **Automatic correlation** with errors and performance traces
-- ✅ **Advanced filtering** and search capabilities
-- ✅ **Our implementation is ALREADY USING IT**
+**What's Currently Working:**
+- ✅ **Dedicated `sentry_logs` driver** configured and operational
+- ✅ **Dual logging strategy**: Info logs → Sentry Logs tab, Errors → Both Logs + Issues tabs
+- ✅ **Rich structured logging** with tags, context, and correlation
+- ✅ **Automatic performance correlation** with transactions and spans
+- ✅ **Comprehensive BusinessLogger service** with specialized logging methods
+- ✅ **Full integration** across all application features (onboarding, validation, search, etc.)
 
-**Current Configuration:**
-- `info` level logs → **Sentry Logs tab** (searchable, filterable)
-- `error`/`critical` logs → **Both Logs tab AND Issues tab** (for alerting)
-- All logs include structured data, tags, and context
-- Full TDD test coverage in upstream Laravel SDK
+**Current Architecture:**
+```
+Laravel Application
+├── Regular Logs → storage/logs/laravel.log (local development)
+├── Info Logs → Sentry Logs Tab (structured, searchable, filterable)
+├── Warning+ Logs → Sentry Logs Tab + Issues Tab (with alerting)
+└── Critical Errors → Issues Tab (for immediate alerting)
+```
 
-**New Features Available:**
+**Advanced Features in Use:**
 - Real-time log streaming in Sentry dashboard
-- Advanced log querying with structured data
-- Automatic log-to-error correlation
+- Advanced log querying with structured data and tags
+- Automatic log-to-error correlation and trace linking
 - Performance metric integration with log events
-- Enhanced debugging with trace-connected logs
+- Enhanced debugging with transaction-connected logs
+- Business intelligence logging with conversion funnels
+- Security event monitoring and alerting
 
 ### Understanding Current Implementation vs Future Sentry Logs
 
@@ -898,58 +904,106 @@ BusinessLogger::logToSentry(
 
 ### Implementation Architecture
 
-#### 1. Configuration Setup
+### Implementation Architecture
 
-**Enable Sentry Logs in Configuration:**
-```php
-// config/sentry.php
-'enable_logs' => env('SENTRY_ENABLE_LOGS', true),
-```
+#### 1. Logging Channel Configuration
 
-**Configure Log Channels:**
+**Optimized Dual-Channel Strategy:**
 ```php
 // config/logging.php
 'channels' => [
-'sentry' => [
-    'driver' => 'sentry',
-        'level' => env('LOG_LEVEL', 'info'),
-    'bubble' => true,
-    'name' => 'business-directory',
-],
+    // Traditional Sentry for Issues/Errors (warning+ level)
+    'sentry' => [
+        'driver' => 'sentry',
+        'level' => 'warning',
+        'bubble' => true,
+        'name' => 'business-directory',
+    ],
 
-'structured' => [
-    'driver' => 'stack',
-    'channels' => ['single', 'sentry'],
+    // NEW: Sentry Logs for structured logging (info+ level)
+    'sentry_logs' => [
+        'driver' => 'sentry_logs',
+        'level' => 'info',
+        'bubble' => true,
+        'name' => 'business-directory-logs',
+    ],
+
+    // Structured logging combining local + Sentry Logs
+    'structured' => [
+        'driver' => 'stack',
+        'channels' => ['single', 'sentry_logs'],
         'name' => 'structured-logs',
     ],
 ],
 ```
 
+**Why This Configuration Works:**
+- **`sentry_logs` driver**: Sends logs to Sentry's dedicated Logs tab
+- **`structured` channel**: Combines local file logging with Sentry Logs
+- **Level separation**: Info logs go to Logs tab, warnings+ go to both tabs
+- **Alerting strategy**: Critical issues still trigger traditional Sentry alerts
+
 **Environment Configuration:**
 ```env
-SENTRY_ENABLE_LOGS=true
-LOG_STACK=single,structured  # Send logs to both file and Sentry
+# Core Sentry Configuration
+SENTRY_LARAVEL_DSN=https://your-dsn@sentry.io/project-id
+
+# Logging Configuration
+LOG_CHANNEL=structured          # Use structured logging by default
+LOG_STACK=single,structured     # For stack driver users
+
+# Optional: Performance Integration
+SENTRY_TRACES_SAMPLE_RATE=0.1   # 10% sampling for production
 ```
 
-#### 2. BusinessLogger Enhancement
+#### 2. Enhanced BusinessLogger Architecture
 
-The `BusinessLogger` service has been enhanced with a centralized `logToSentry()` method that provides:
-
+**Core Logging Method with Advanced Features:**
 ```php
 private static function logToSentry(
-    string $level,           // Log level (info, warning, error, etc.)
+    string $level,           // Log level (debug, info, warning, error, critical)
     string $message,         // Human-readable message
-    array $data,            // Structured log data
-    array $tags = [],       // Filterable tags
+    array $data,            // Structured event data
+    array $tags = [],       // Filterable tags for Sentry dashboard
     array $context = []     // Rich contextual information
-): void
+): void {
+    // Send to structured channel (includes Sentry Logs)
+    Log::channel('structured')->{$level}($message, $data);
+
+    // Enhance Sentry context with tags and structured data
+    configureScope(function (Scope $scope) use ($tags, $context, $data): void {
+        // Add filterable tags
+        foreach ($tags as $key => $value) {
+            $scope->setTag($key, $value);
+        }
+
+        // Add structured context
+        foreach ($context as $key => $value) {
+            $scope->setContext($key, $value);
+        }
+
+        // Automatic performance correlation
+        if (isset($data['processing_time_ms'])) {
+            $scope->setContext('performance', [
+                'duration_ms' => $data['processing_time_ms'],
+                'grade' => self::getPerformanceGrade($data['processing_time_ms']),
+            ]);
+        }
+    });
+
+    // Critical events go to both Logs AND Issues tabs
+    if (in_array($level, ['error', 'critical'])) {
+        captureMessage($message, self::getSentryLevel($level));
+    }
+}
 ```
 
-**Key Features:**
-- **Automatic Context Enhancement**: Adds performance metrics, user session data
-- **Tag-Based Organization**: Enables powerful filtering in Sentry dashboard
-- **Level-Appropriate Handling**: Critical events trigger direct Sentry messages
-- **Structured Data**: Maintains data structure for querying and analysis
+**Advanced Features:**
+- **Dual Channel Logging**: Automatic routing to appropriate Sentry tabs
+- **Rich Context Enhancement**: Automatic addition of performance metrics, user session data
+- **Smart Alerting**: Critical events trigger traditional Sentry alerts while maintaining log history
+- **Tag-Based Organization**: Enables powerful filtering and searching in Sentry dashboard
+- **Automatic Correlation**: Links logs to active transactions and spans
 
 #### 3. Enhanced Logging Methods
 
@@ -1070,18 +1124,159 @@ BusinessLogger::securityEvent('suspicious_login_attempt', [
 
 ### Sentry Dashboard Integration
 
-#### 1. Log Stream View
-- **Real-time Logs**: See logs as they happen in production
-- **Filtering**: Filter by tags, levels, time ranges
-- **Search**: Full-text search across log messages and data
-- **Correlation**: Click through to related transactions and errors
+#### 1. Logs Tab Features
+
+**Real-time Log Streaming:**
+- Live updates as logs are generated
+- Advanced filtering by tags, levels, time ranges, and custom fields
+- Full-text search across messages and structured data
+- Correlation with transactions, spans, and error events
+
+**Advanced Querying Examples:**
+```
+# Search by business feature
+feature:business_onboarding
+
+# Filter by onboarding stage and time
+onboarding_stage:started AND timestamp:[2025-01-01 TO 2025-01-31]
+
+# Find slow operations
+processing_time_ms:>1000
+
+# Search for specific errors
+event_category:validation_error AND error_count:>3
+```
 
 #### 2. Performance Correlation
+
+**Automatic Trace Correlation:**
+When logs are generated within active transactions/spans, they automatically appear in:
+- **Transaction details** (linked logs section)
+- **Span details** (contextual logs)
+- **Error details** (leading up to error)
+
+**Example Correlation Flow:**
+```
+Transaction: Business Onboarding (1.2s)
+├── Span: Validation (200ms)
+├── Logs: 
+│   ├── [INFO] Business onboarding form viewed
+│   ├── [WARNING] Validation failed: email format invalid
+│   └── [INFO] Validation retry successful
+├── Span: Database Insert (800ms)
+└── Logs:
+    └── [INFO] Business created successfully
+```
+
+#### 3. Alerting Integration
+
+**Smart Alerting Strategy:**
+- **Info logs**: Appear only in Logs tab (no alerts)
+- **Warning logs**: Appear in both Logs + Issues tabs (configurable alerts)
+- **Error+ logs**: Full Issues tab treatment with immediate alerting
+
+**Alert Configuration Examples:**
 ```php
-// Logs automatically include performance context when available
-'performance' => [
-    'duration_ms' => 250,
-    'grade' => 'good',  // excellent, good, fair, poor
+// This triggers an alert (error level)
+BusinessLogger::applicationError($exception, 'payment_processing_failed');
+
+// This logs but doesn't alert (info level)
+BusinessLogger::businessCreated($business, $processingTime);
+
+// This logs and may alert based on configuration (warning level)
+BusinessLogger::validationFailed($errors, $request);
+```
+
+### Advanced Use Cases
+
+#### 1. Business Intelligence Logging
+
+**Conversion Funnel Tracking:**
+```php
+public static function funnelEvent(string $stage, array $funnelData = []): void
+{
+    self::logToSentry(
+        level: 'info',
+        message: "Conversion funnel: {$stage}",
+        data: [
+            'event' => 'funnel_progression',
+            'stage' => $stage,
+            'timestamp' => now()->toISOString(),
+            ...$funnelData
+        ],
+        tags: [
+            'analytics' => 'conversion_funnel',
+            'funnel_stage' => $stage,
+        ],
+        context: ['funnel' => $funnelData]
+    );
+}
+```
+
+#### 2. Security Event Monitoring
+
+**Comprehensive Security Logging:**
+```php
+public static function securityEvent(string $eventType, array $securityData = []): void
+{
+    self::logToSentry(
+        level: 'warning',  // Security events need visibility
+        message: "Security event: {$eventType}",
+        data: [
+            'event' => 'security_event',
+            'event_type' => $eventType,
+            'severity' => $securityData['severity'] ?? 'medium',
+            'timestamp' => now()->toISOString(),
+            ...$securityData
+        ],
+        tags: [
+            'security' => 'true',
+            'event_type' => $eventType,
+            'severity' => $securityData['severity'] ?? 'medium',
+        ],
+        context: ['security' => $securityData]
+    );
+}
+```
+
+### Best Practices for Sentry Logs
+
+#### 1. Structured Data Design
+
+**Consistent Event Structure:**
+```php
+$data = [
+    'event' => 'specific_event_name',        // For filtering
+    'timestamp' => now()->toISOString(),     // Precise timing
+    'session_id' => session()->getId(),      // User correlation
+    // ... specific event data
+];
+```
+
+#### 2. Effective Tagging Strategy
+
+**Hierarchical Tags:**
+```php
+$tags = [
+    'feature' => 'business_onboarding',      // Top-level feature
+    'event_category' => 'user_action',       // Event type
+    'onboarding_stage' => 'validation',      // Specific stage
+    'business_type' => 'restaurant',         // Business context
+];
+```
+
+#### 3. Performance Integration
+
+**Always Include Performance Data:**
+```php
+// Measure operation time
+$startTime = microtime(true);
+// ... perform operation
+$processingTime = (microtime(true) - $startTime) * 1000;
+
+// Include in log
+$data['processing_time_ms'] = $processingTime;
+```
 ]
 ```
 
@@ -1232,6 +1427,73 @@ Create custom dashboards for:
 - **Performance Monitoring**: Response times, database performance
 - **Error Tracking**: Validation errors, system failures
 - **User Journey**: Session flows, abandonment points
+
+### Troubleshooting Common Issues
+
+#### 1. Logs Not Appearing in Sentry
+
+**Check Configuration:**
+```bash
+# Test Sentry connection
+./vendor/bin/sail artisan sentry:test
+
+# Check log channel configuration
+./vendor/bin/sail artisan config:show logging.channels.sentry_logs
+```
+
+**Verify Environment Variables:**
+```env
+SENTRY_LARAVEL_DSN=https://your-dsn@sentry.io/project-id
+LOG_CHANNEL=structured  # or stack with structured included
+LOG_STACK=single,structured  # if using stack driver
+```
+
+#### 2. Missing Context or Tags
+
+**Ensure Proper logToSentry Usage:**
+```php
+// Correct: Rich context
+BusinessLogger::businessCreated($business, $processingTime);
+
+// Incorrect: Plain Laravel Log
+Log::info('Business created', ['id' => $business->id]);
+```
+
+#### 3. Performance Impact
+
+**Monitor Sentry Overhead:**
+```php
+// Check if performance is impacted
+BusinessLogger::performanceMetric('sentry_logging_overhead', $loggingTime);
+```
+
+**Configure Appropriate Sample Rates:**
+```env
+# Development: See everything
+SENTRY_TRACES_SAMPLE_RATE=1.0
+
+# Production: Sample for performance
+SENTRY_TRACES_SAMPLE_RATE=0.1
+```
+
+#### 4. Logs Appearing in Wrong Tab
+
+**Issue**: Logs appearing in Issues tab instead of Logs tab
+**Solution**: Check your logging configuration:
+```php
+// Make sure you're using the correct driver
+'sentry_logs' => [
+    'driver' => 'sentry_logs',  // NOT 'sentry'
+    'level' => 'info',
+],
+```
+
+**Issue**: Critical logs not appearing in Issues tab
+**Solution**: Ensure dual logging for critical events:
+```php
+// This should trigger both Logs and Issues
+BusinessLogger::applicationError($exception, 'context');
+```
 
 ### Testing Sentry Logs Integration
 

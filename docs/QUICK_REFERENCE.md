@@ -179,8 +179,16 @@ docker ps
 # Check Sentry configuration
 ./vendor/bin/sail artisan config:show sentry
 
+# Check logging configuration (for Sentry Logs)
+./vendor/bin/sail artisan config:show logging.channels.sentry_logs
+./vendor/bin/sail artisan config:show logging.channels.structured
+
 # Clear config cache after Sentry changes
 ./vendor/bin/sail artisan config:clear
+
+# Test Sentry Logs integration
+./vendor/bin/sail artisan tinker
+# Then: BusinessLogger::businessCreated(Business::first(), 250);
 ```
 
 ### Admin Access Issues
@@ -193,11 +201,62 @@ docker ps
 ./vendor/bin/sail artisan route:list --name=admin
 ```
 
+## 📊 Sentry Logs Quick Commands
+
+### BusinessLogger Usage Examples
+```php
+// In controllers or services
+use App\Services\BusinessLogger;
+
+// Log business events (goes to Sentry Logs tab)
+BusinessLogger::businessCreated($business, $processingTimeMs);
+BusinessLogger::onboardingStarted($request);
+BusinessLogger::validationFailed($errors, $request);
+
+// Critical events (goes to both Logs and Issues tabs)
+BusinessLogger::applicationError($exception, 'context');
+BusinessLogger::criticalBusinessEvent('payment_failure', $data);
+
+// Performance tracking
+BusinessLogger::performanceMetric('database_query', $durationMs);
+BusinessLogger::slowQuery('business_search', $executionTime);
+```
+
+### Sentry Dashboard Queries
+```javascript
+// Search by business feature
+feature:business_onboarding
+
+// Filter by processing time (slow operations)
+processing_time_ms:>1000
+
+// Find validation errors
+event_category:validation_error
+
+// Security events
+security:true AND severity:high
+```
+
+### Log Channel Configuration
+```php
+// config/logging.php
+'structured' => [
+    'driver' => 'stack',
+    'channels' => ['single', 'sentry_logs'], // Uses Sentry Logs driver
+],
+
+'sentry_logs' => [
+    'driver' => 'sentry_logs', // NEW: Sends to Sentry Logs tab
+    'level' => 'info',
+],
+```
+
 ## 📁 Important File Locations
 
 ### Configuration
 - `config/app.php` - Application configuration
 - `config/database.php` - Database configuration
+- `config/logging.php` - Logging and Sentry Logs configuration
 - `config/sentry.php` - Sentry monitoring configuration
 - `.env` - Environment variables (includes Sentry DSN)
 - `phpunit.xml` - Test configuration
@@ -280,7 +339,8 @@ public function admin_can_perform_action()
 
 ### Public Application URLs
 - **Home**: http://localhost
-- **Business Onboarding**: http://localhost/onboard
+- **Business Onboarding**: http://localhost/onboard/step/1 (multi-step form)
+- **Legacy Onboarding**: http://localhost/onboard (redirects to step 1)
 - **Business Listing**: http://localhost/businesses
 - **Individual Business**: http://localhost/business/{slug}
 
@@ -293,6 +353,93 @@ public function admin_can_perform_action()
 - **Application**: http://localhost
 - **MySQL**: localhost:3306
 - **Vite Dev Server**: localhost:5173
+
+## 🚀 Multi-Step Business Onboarding
+
+### Onboarding Flow Overview
+The business onboarding process has been redesigned as a user-friendly multi-step form to improve completion rates and user experience.
+
+### Step-by-Step Process
+1. **Step 1 (25%)** - Business Information
+   - URL: `/onboard/step/1`
+   - Fields: Business name, industry, type, description, tagline
+   
+2. **Step 2 (50%)** - Contact Information  
+   - URL: `/onboard/step/2`
+   - Fields: Email, phone, website
+   
+3. **Step 3 (75%)** - Location Details
+   - URL: `/onboard/step/3`
+   - Fields: Street address, city, state, postal code, country
+   
+4. **Step 4 (100%)** - Owner Information
+   - URL: `/onboard/step/4`
+   - Fields: Owner name, owner email
+   
+5. **Review Page** - Final Review
+   - URL: `/onboard/review`
+   - Shows all collected data with edit links
+   
+6. **Success Page** - Completion
+   - URL: `/onboard/success`
+   - Confirmation and next steps
+
+### Key Features
+- **Progressive Disclosure**: Reduces cognitive load with smaller forms
+- **Session Persistence**: Data saved between steps
+- **Step Validation**: Individual step validation prevents errors
+- **Progress Tracking**: Visual progress indicator (25%, 50%, 75%, 100%)
+- **Navigation Control**: Users can go back to edit previous steps
+- **Responsive Design**: Mobile-friendly interface
+
+### Legacy Route Handling
+- **Old Route**: `/onboard` → Redirects to `/onboard/step/1`
+- **Old POST**: `/onboard` → Redirects to `/onboard/step/1` with analytics logging
+- **Backward Compatibility**: All existing links automatically redirect
+
+### Testing Multi-Step Flow
+```bash
+# Run multi-step specific tests
+./vendor/bin/sail artisan test tests/Feature/BusinessOnboardingMultiStepTest.php
+
+# Run redirect tests
+./vendor/bin/sail artisan test tests/Feature/BusinessOnboardingRedirectTest.php
+
+# Run all onboarding tests
+./vendor/bin/sail artisan test --filter=BusinessOnboarding
+
+# Test individual steps
+./vendor/bin/sail artisan test --filter=step_1_requires_all_required_fields
+```
+
+### Session Data Structure
+```php
+// Session keys used during onboarding
+'onboarding_step_1' => [
+    'business_name' => '...',
+    'industry' => '...',
+    'business_type' => '...',
+    'description' => '...',
+    'tagline' => '...'
+],
+'onboarding_step_2' => [
+    'primary_email' => '...',
+    'phone_number' => '...',
+    'website_url' => '...'
+],
+'onboarding_step_3' => [
+    'street_address' => '...',
+    'city' => '...',
+    'state_province' => '...',
+    'postal_code' => '...',
+    'country' => '...'
+],
+'onboarding_step_4' => [
+    'owner_name' => '...',
+    'owner_email' => '...'
+],
+'onboarding_progress' => 75 // Progress percentage
+```
 
 ### Database Access
 ```bash
@@ -328,11 +475,14 @@ ls -la public/build/
 ```
 
 ### Current Implementation Status
-- ✅ Business Onboarding (7 tests passing)
+- ✅ Multi-Step Business Onboarding (17 tests passing)
+- ✅ Business Onboarding Redirects (8 tests passing)
+- ✅ Legacy Business Onboarding (11 tests passing)
 - ✅ Business Listing (5 tests passing)
-- ✅ Individual Business Pages
-- ✅ Admin Authentication (8 tests passing)
-- ✅ Admin Business Management (13 tests passing)
+- ✅ Individual Business Pages (10 tests passing)
+- ✅ Admin Authentication (9 tests passing)
+- ✅ Admin Business Management (12 tests passing)
+- ✅ Welcome Page Integration (28 tests passing)
 - ✅ Admin Dashboard with Statistics
 - ✅ Business Approval Workflow
 - ✅ Featured Business Management
@@ -340,14 +490,23 @@ ls -la public/build/
 - ✅ Sentry Integration & Monitoring
 - ✅ Responsive UI Design
 - ✅ Empty State Handling
+- ✅ Progressive Form UX
+- ✅ Session-Based Step Management
+- ✅ Backward Compatibility
 
 ### Test Coverage Summary
 ```bash
-# Total tests: 33+ passing
-# - BusinessOnboardingTest: 7 tests
+# Total tests: 102 passing (401 assertions)
+# - BusinessOnboardingMultiStepTest: 17 tests (74 assertions)
+# - BusinessOnboardingRedirectTest: 8 tests (19 assertions)
+# - BusinessOnboardingTest: 11 tests (updated for redirects)
 # - BusinessListingTest: 5 tests
-# - AdminAuthTest: 8 tests
-# - AdminBusinessManagementTest: 13 tests
+# - AdminAuthTest: 9 tests
+# - AdminBusinessManagementTest: 12 tests
+# - BusinessDetailPageTest: 10 tests
+# - WelcomePageTest: 16 tests
+# - WelcomePageIntegrationTest: 12 tests
+# - ExampleTest: 2 tests
 ```
 
 ## 🔧 Environment Variables

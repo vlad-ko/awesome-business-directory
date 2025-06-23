@@ -35,10 +35,9 @@ class WelcomePageIntegrationTest extends TestCase
         $response = $this->get('/');
         $response->assertStatus(200);
 
-        // Follow the Join Directory link
+        // Follow the Join Directory link - should redirect to new multi-step form
         $onboardResponse = $this->get(route('business.onboard'));
-        $onboardResponse->assertStatus(200);
-        $onboardResponse->assertViewIs('onboarding.create');
+        $onboardResponse->assertRedirect(route('business.onboard.step', 1));
     }
 
     #[Test]
@@ -56,12 +55,12 @@ class WelcomePageIntegrationTest extends TestCase
         $exploreResponse = $this->get($exploreUrl);
         $exploreResponse->assertStatus(200);
 
-        // Test "List Your Business" button
+        // Test "List Your Business" button - should redirect to multi-step form
         $listUrl = route('business.onboard');
         $response->assertSee($listUrl);
         
         $listResponse = $this->get($listUrl);
-        $listResponse->assertStatus(200);
+        $listResponse->assertRedirect(route('business.onboard.step', 1));
     }
 
     #[Test]
@@ -111,7 +110,7 @@ class WelcomePageIntegrationTest extends TestCase
         $businessesResponse->assertStatus(200);
 
         $onboardResponse = $this->get(route('business.onboard'));
-        $onboardResponse->assertStatus(200);
+        $onboardResponse->assertRedirect(route('business.onboard.step', 1));
     }
 
     #[Test]
@@ -155,9 +154,9 @@ class WelcomePageIntegrationTest extends TestCase
         $businessesResponse = $this->get(route('businesses.index'));
         $businessesResponse->assertStatus(200);
         
-        // 3. User goes back and clicks "Join Directory"
+        // 3. User goes back and clicks "Join Directory" - should redirect to multi-step form
         $onboardResponse = $this->get(route('business.onboard'));
-        $onboardResponse->assertStatus(200);
+        $onboardResponse->assertRedirect(route('business.onboard.step', 1));
         
         // 4. User can return to welcome page
         $returnResponse = $this->get('/');
@@ -210,7 +209,7 @@ class WelcomePageIntegrationTest extends TestCase
         $businessesResponse->assertStatus(200);
 
         $onboardResponse = $this->actingAs($admin)->get(route('business.onboard'));
-        $onboardResponse->assertStatus(200);
+        $onboardResponse->assertRedirect(route('business.onboard.step', 1));
     }
 
     #[Test]
@@ -228,6 +227,6 @@ class WelcomePageIntegrationTest extends TestCase
         $businessesResponse->assertStatus(200);
 
         $onboardResponse = $this->actingAs($user)->get(route('business.onboard'));
-        $onboardResponse->assertStatus(200);
+        $onboardResponse->assertRedirect(route('business.onboard.step', 1));
     }
 } 

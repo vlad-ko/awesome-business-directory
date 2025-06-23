@@ -30,7 +30,7 @@
                     </div>
                     <div class="space-x-4">
                         <a href="{{ route('businesses.index') }}" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 backdrop-blur-sm">Browse Businesses</a>
-                        <a href="{{ route('business.onboard') }}" class="bg-yellow-400 hover:bg-yellow-300 text-purple-800 px-6 py-2 rounded-full font-bold transition-all duration-200 transform hover:scale-105 neon-glow">Join Directory</a>
+                        <a href="{{ route('business.onboard.step', 1) }}" class="bg-yellow-400 hover:bg-yellow-300 text-purple-800 px-6 py-2 rounded-full font-bold transition-all duration-200 transform hover:scale-105 neon-glow">Join Directory</a>
                     </div>
                 </div>
                 </nav>
@@ -56,7 +56,7 @@
                        class="bg-pink-500 hover:bg-pink-400 text-white px-8 py-4 rounded-full font-bold text-lg transition-all duration-200 transform hover:scale-105 neon-glow">
                         🔍 Explore Businesses
                     </a>
-                    <a href="{{ route('business.onboard') }}" 
+                    <a href="{{ route('business.onboard.step', 1) }}" 
                        class="bg-transparent border-2 border-yellow-300 text-yellow-300 hover:bg-yellow-300 hover:text-purple-800 px-8 py-4 rounded-full font-bold text-lg transition-all duration-200">
                         🚀 List Your Business
                     </a>

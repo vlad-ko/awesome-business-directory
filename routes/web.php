@@ -39,6 +39,13 @@ Route::get('/', function (Illuminate\Http\Request $request) {
 Route::get('/onboard', [BusinessOnboardingController::class, 'create'])->name('business.onboard');
 Route::post('/onboard', [BusinessOnboardingController::class, 'store'])->name('business.store');
 
+// Multi-step onboarding routes
+Route::get('/onboard/step/{step}', [BusinessOnboardingController::class, 'showStep'])->name('business.onboard.step')->where('step', '[1-4]');
+Route::post('/onboard/step/{step}', [BusinessOnboardingController::class, 'storeStep'])->name('business.onboard.step.store')->where('step', '[1-4]');
+Route::get('/onboard/review', [BusinessOnboardingController::class, 'review'])->name('business.onboard.review');
+Route::post('/onboard/submit', [BusinessOnboardingController::class, 'submit'])->name('business.onboard.submit');
+Route::get('/onboard/success', [BusinessOnboardingController::class, 'success'])->name('business.onboard.success');
+
 Route::get('/businesses', [BusinessController::class, 'index'])->name('businesses.index');
 Route::get('/business/{business}', [BusinessController::class, 'show'])->name('business.show');
 

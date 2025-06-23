@@ -150,9 +150,9 @@ class WelcomePageTest extends TestCase
         $businessesResponse = $this->get(route('businesses.index'));
         $businessesResponse->assertStatus(200);
         
-        // Test that clicking the Join Directory link works
+        // Test that clicking the Join Directory link works - should redirect to multi-step form
         $onboardResponse = $this->get(route('business.onboard'));
-        $onboardResponse->assertStatus(200);
+        $onboardResponse->assertRedirect(route('business.onboard.step', 1));
     }
 
     #[Test]
