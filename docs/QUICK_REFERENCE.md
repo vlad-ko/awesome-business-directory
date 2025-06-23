@@ -218,8 +218,8 @@ BusinessLogger::validationFailed($errors, $request);
 BusinessLogger::multiStepStepStarted($step, $context);
 BusinessLogger::multiStepStepCompleted($step, $stepData, $timeMs);
 BusinessLogger::multiStepValidationError($step, $errors, $submittedData);
-BusinessLogger::multiStepReviewReached($allStepData, $totalJourneyTimeMs);
-BusinessLogger::multiStepConversionCompleted($business, $journeyMetrics);
+BusinessLogger::multiStepReviewReached($allStepData, $totalExperienceTimeMs);
+BusinessLogger::multiStepConversionCompleted($business, $experienceMetrics);
 BusinessLogger::multiStepBackNavigation($fromStep, $toStep, $reason);
 BusinessLogger::multiStepPotentialAbandonment($lastStep, $sessionData);
 BusinessLogger::multiStepErrorRecovery($step, $previousErrors, $successful);
@@ -253,8 +253,8 @@ event_category:validation_error
 onboarding_stage:step_1 OR onboarding_stage:step_2
 step_number:1 AND event:multi_step_onboarding_step_completed
 
-// Journey timing analysis
-total_journey_time_ms:>30000
+// Experience timing analysis
+total_experience_time_ms:>30000
 
 // Security events
 security:true AND severity:high
@@ -468,7 +468,7 @@ The business onboarding process has been redesigned as a user-friendly multi-ste
     'owner_email' => '...'
 ],
 'onboarding_progress' => 75, // Progress percentage
-'onboarding_journey_start_time' => 1640995200.123 // Journey timing (NEW)
+'onboarding_experience_start_time' => 1640995200.123 // Experience timing (NEW)
 ```
 
 ### Database Access
@@ -520,7 +520,7 @@ ls -la public/build/
 - ✅ Business Verification System
 - ✅ Sentry Integration & Monitoring
 - ✅ Comprehensive Multi-Step Analytics **NEW**
-- ✅ Journey Timing & Funnel Metrics **NEW**
+- ✅ Experience Timing & Funnel Metrics **NEW**
 - ✅ User Behavior Pattern Tracking **NEW**
 - ✅ Error Recovery Logging **NEW**
 - ✅ Responsive UI Design
@@ -624,13 +624,13 @@ User::factory()->create([
 - **Error Tracking**: Automatic exception capture
 - **Performance Monitoring**: Transaction and span tracking
 - **Custom Metrics**: Business-specific analytics
-- **User Journey**: Breadcrumb tracking
+- **User Experience**: Breadcrumb tracking
 - **Admin Activity**: Full admin action monitoring
 
 ### Multi-Step Onboarding Analytics (NEW)
 - **Step Progression**: Track user movement through each step
 - **Completion Funnel**: Measure drop-off rates at each stage
-- **Journey Timing**: Total time from start to completion
+- **Experience Timing**: Total time from start to completion
 - **Error Recovery**: Track validation failures and recovery patterns
 - **Back Navigation**: Monitor when users return to previous steps
 - **Abandonment Detection**: Identify potential dropout points
@@ -640,7 +640,7 @@ User::factory()->create([
 ### Key Metrics Tracked
 - Business onboarding completion rates (with step-by-step breakdown)
 - Step-specific validation error rates
-- Average journey completion time
+- Average experience completion time
 - Most common abandonment points
 - Error recovery success rates
 - Page load performance

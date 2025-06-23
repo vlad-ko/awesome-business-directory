@@ -122,7 +122,7 @@ class BusinessLogger
             ]
         );
 
-        // Add Sentry breadcrumb for tracking user journey
+        // Add Sentry breadcrumb for tracking user experience
         addBreadcrumb(
             category: 'user.action',
             message: 'Business onboarding started',
@@ -525,7 +525,7 @@ class BusinessLogger
 
         Log::info("Welcome page viewed", $data);
 
-        // Add Sentry breadcrumb for user journey tracking
+        // Add Sentry breadcrumb for user experience tracking
         addBreadcrumb(
             category: 'page.view',
             message: 'Welcome page viewed',
@@ -866,31 +866,31 @@ class BusinessLogger
     }
 
     /**
-     * Log user journey milestones to Sentry
+     * Log user experience milestones to Sentry
      */
-    public static function userJourneyMilestone(string $milestone, array $journeyData = []): void
+    public static function userExperienceMilestone(string $milestone, array $experienceData = []): void
     {
         $data = [
-            'event' => 'user_journey_milestone',
+            'event' => 'user_experience_milestone',
             'milestone' => $milestone,
             'timestamp' => now()->toISOString(),
             'session_id' => session()->getId(),
-            ...$journeyData,
+            ...$experienceData,
         ];
 
         self::logToSentry(
             level: 'info',
-            message: "User journey milestone: {$milestone}",
+            message: "User experience milestone: {$milestone}",
             data: $data,
             tags: [
-                'feature' => 'user_journey',
+                'feature' => 'user_experience',
                 'event_category' => 'milestone',
                 'milestone' => $milestone,
             ],
             context: [
-                'user_journey' => [
+                'user_experience' => [
                     'milestone' => $milestone,
-                    'journey_data' => $journeyData,
+                    'experience_data' => $experienceData,
                     'progress_tracking' => true,
                 ],
             ]
@@ -1123,7 +1123,7 @@ class BusinessLogger
     /**
      * Log review page reached (high-intent event)
      */
-    public static function multiStepReviewReached(array $allStepData = [], ?float $totalJourneyTimeMs = null): void
+    public static function multiStepReviewReached(array $allStepData = [], ?float $totalExperienceTimeMs = null): void
     {
         $totalFields = 0;
         $completedSteps = 0;
@@ -1140,7 +1140,7 @@ class BusinessLogger
             'timestamp' => now()->toISOString(),
             'completed_steps' => $completedSteps,
             'total_fields_completed' => $totalFields,
-            'total_journey_time_ms' => $totalJourneyTimeMs,
+            'total_experience_time_ms' => $totalExperienceTimeMs,
             'session_id' => session()->getId(),
             'conversion_likelihood' => 'high', // Users who reach review are likely to convert
             'step_data_keys' => array_keys($allStepData),
@@ -1161,7 +1161,7 @@ class BusinessLogger
                     'stage' => 'review',
                     'completed_steps' => $completedSteps,
                     'total_fields' => $totalFields,
-                    'journey_time_ms' => $totalJourneyTimeMs,
+                    'experience_time_ms' => $totalExperienceTimeMs,
                     'likelihood' => 'high',
                 ],
             ]
@@ -1174,7 +1174,7 @@ class BusinessLogger
             metadata: [
                 'completed_steps' => $completedSteps,
                 'total_fields' => $totalFields,
-                'journey_time_ms' => $totalJourneyTimeMs,
+                'experience_time_ms' => $totalExperienceTimeMs,
             ]
         );
     }
@@ -1182,7 +1182,7 @@ class BusinessLogger
     /**
      * Log successful multi-step onboarding conversion
      */
-    public static function multiStepConversionCompleted(Business $business, array $journeyMetrics = []): void
+    public static function multiStepConversionCompleted(Business $business, array $experienceMetrics = []): void
     {
         $data = [
             'event' => 'multi_step_onboarding_conversion_completed',
@@ -1193,13 +1193,13 @@ class BusinessLogger
             'business_type' => $business->business_type,
             'session_id' => session()->getId(),
             'conversion_status' => 'successful',
-            'total_journey_time_ms' => $journeyMetrics['total_time_ms'] ?? null,
+            'total_experience_time_ms' => $experienceMetrics['total_time_ms'] ?? null,
             'steps_completed' => 4,
-            'review_page_visited' => $journeyMetrics['review_visited'] ?? true,
+            'review_page_visited' => $experienceMetrics['review_visited'] ?? true,
         ];
 
-        // Add journey metrics if provided
-        $data = array_merge($data, $journeyMetrics);
+        // Add experience metrics if provided
+        $data = array_merge($data, $experienceMetrics);
 
         self::logToSentry(
             level: 'info',
@@ -1218,7 +1218,7 @@ class BusinessLogger
                     'business_id' => $business->id,
                     'business_name' => $business->business_name,
                     'industry' => $business->industry,
-                    'journey_metrics' => $journeyMetrics,
+                    'experience_metrics' => $experienceMetrics,
                 ],
             ]
         );

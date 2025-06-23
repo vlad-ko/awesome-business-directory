@@ -142,9 +142,9 @@ class WelcomePageIntegrationTest extends TestCase
     }
 
     #[Test]
-    public function welcome_page_user_journey_flow()
+    public function welcome_page_user_experience_flow()
     {
-        // Simulate a complete user journey starting from welcome page
+        // Simulate a complete user experience starting from welcome page
         
         // 1. User visits welcome page
         $welcomeResponse = $this->get('/');

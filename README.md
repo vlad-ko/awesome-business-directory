@@ -14,7 +14,7 @@ This application provides a complete business directory platform where companies
 ### ✨ Key Features
 - ✅ **Multi-Step Business Onboarding** - User-friendly 4-step form with progress tracking
 - ✅ **Progressive Form UX** - Reduces cognitive load with session-based step management
-- ✅ **Comprehensive Analytics Logging** - **NEW** - Complete user journey tracking with Sentry
+- ✅ **Comprehensive Analytics Logging** - **NEW** - Complete user experience tracking with Sentry
 - ✅ **Funnel Analysis & Metrics** - **NEW** - Step-by-step conversion tracking and timing
 - ✅ **Business Directory** - Professional listing with featured/verified badges
 - ✅ **Individual Business Pages** - Detailed profiles with slug-based SEO-friendly URLs
@@ -36,7 +36,7 @@ This application provides a complete business directory platform where companies
 - **Tailwind CSS** for responsive, modern UI
 - **Sentry.io Integration** with 100% tracing for development
 - **Structured Logging** with BusinessLogger service
-- **Multi-Step Analytics** with comprehensive user journey tracking **NEW**
+- **Multi-Step Analytics** with comprehensive user experience tracking **NEW**
 - **Custom Performance Monitoring** with transaction traces and spans
 
 ## 🧪 Development Approach: Test-Driven Development (TDD)
@@ -559,7 +559,7 @@ Our application includes comprehensive Sentry.io integration for:
 - **Error Tracking**: Automatic capture of exceptions with rich context
 - **Performance Monitoring**: Track response times and database queries
 - **Custom Business Logic Monitoring**: Track business onboarding, validation failures, and admin actions
-- **User Journey Tracking**: Monitor user flows from welcome page to business creation
+- **User Experience Tracking**: Monitor user flows from welcome page to business creation
 
 Key features:
 - Custom `BusinessLogger` service for structured logging
@@ -584,7 +584,7 @@ Key features:
 #### Enhanced Multi-Step Logging Capabilities (NEW)
 
 ```php
-// Multi-step onboarding journey tracking
+// Multi-step onboarding experience tracking
 BusinessLogger::multiStepStepStarted($step, [
     'ip_address' => $request->ip(),
     'user_agent' => $request->userAgent(),
@@ -596,7 +596,7 @@ BusinessLogger::multiStepStepCompleted($step, $stepData, $processingTimeMs);
 
 // Comprehensive conversion tracking
 BusinessLogger::multiStepConversionCompleted($business, [
-    'total_journey_time_ms' => 45000,
+    'total_experience_time_ms' => 45000,
     'steps_completed' => 4,
     'validation_errors_encountered' => 1,
     'review_visited' => true,
@@ -612,8 +612,8 @@ BusinessLogger::criticalBusinessEvent('payment_processor_down', [
     'affected_users' => 150,
 ]);
 
-// User journey milestone tracking for conversion analysis
-BusinessLogger::userJourneyMilestone('onboarding_completed', [
+// User experience milestone tracking for conversion analysis
+BusinessLogger::userExperienceMilestone('onboarding_completed', [
     'completion_time_minutes' => 12,
     'validation_errors_encountered' => 2,
 ]);

@@ -55,9 +55,9 @@ class BusinessOnboardingController extends Controller
 
         $startTime = microtime(true);
 
-        // Set journey start time for step 1
-        if ($step === 1 && !session()->has('onboarding_journey_start_time')) {
-            session(['onboarding_journey_start_time' => $startTime]);
+        // Set experience start time for step 1
+        if ($step === 1 && !session()->has('onboarding_experience_start_time')) {
+            session(['onboarding_experience_start_time' => $startTime]);
         }
 
         // Log multi-step step started with enhanced context
@@ -227,12 +227,12 @@ class BusinessOnboardingController extends Controller
             $allStepData["onboarding_step_{$i}"] = $stepData;
         }
 
-        // Calculate total journey time (if available)
-        $journeyStartTime = session('onboarding_journey_start_time', $startTime);
-        $totalJourneyTime = ($startTime - $journeyStartTime) * 1000;
+        // Calculate total experience time (if available)
+        $experienceStartTime = session('onboarding_experience_start_time', $startTime);
+        $totalExperienceTime = ($startTime - $experienceStartTime) * 1000;
 
         // Log review page reached (high-intent event)
-        BusinessLogger::multiStepReviewReached($allStepData, $totalJourneyTime);
+        BusinessLogger::multiStepReviewReached($allStepData, $totalExperienceTime);
 
         // Start transaction for review page
         $transaction = BusinessLogger::startBusinessTransaction('onboarding_review', [
@@ -293,12 +293,12 @@ class BusinessOnboardingController extends Controller
             // Calculate processing time
             $processingTime = (microtime(true) - $startTime) * 1000;
 
-            // Calculate journey metrics
-            $journeyStartTime = session('onboarding_journey_start_time', $startTime);
-            $totalJourneyTime = ($startTime - $journeyStartTime) * 1000;
+            // Calculate experience metrics
+            $experienceStartTime = session('onboarding_experience_start_time', $startTime);
+            $totalExperienceTime = ($startTime - $experienceStartTime) * 1000;
             
-            $journeyMetrics = [
-                'total_time_ms' => $totalJourneyTime,
+            $experienceMetrics = [
+                'total_time_ms' => $totalExperienceTime,
                 'processing_time_ms' => $processingTime,
                 'review_visited' => true,
                 'steps_completed' => count(self::STEPS),
@@ -306,7 +306,7 @@ class BusinessOnboardingController extends Controller
             ];
 
             // Log multi-step conversion completion
-            BusinessLogger::multiStepConversionCompleted($business, $journeyMetrics);
+            BusinessLogger::multiStepConversionCompleted($business, $experienceMetrics);
 
             // Log successful business creation
             BusinessLogger::businessCreated($business, $processingTime);
@@ -438,7 +438,7 @@ class BusinessOnboardingController extends Controller
             session()->forget("step_{$i}_error_attempts"); // Clear error attempt tracking
         }
         session()->forget('onboarding_progress');
-        session()->forget('onboarding_journey_start_time');
+        session()->forget('onboarding_experience_start_time');
     }
     public function create(Request $request)
     {
