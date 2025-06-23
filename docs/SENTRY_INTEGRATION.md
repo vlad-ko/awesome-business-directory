@@ -41,9 +41,9 @@ Log::error('Business creation failed', ['error' => $e->getMessage()]);
 
 **Sentry's Enhanced Approach:**
 ```php
-// Rich context with user journey, performance data, and environment
+// Rich context with user experience, performance data, and environment
 BusinessLogger::applicationError($e, 'business_creation_failed', [
-    'user_journey' => $breadcrumbs,
+    'user_experience' => $breadcrumbs,
     'performance_metrics' => $timing_data,
     'business_context' => $business_data
 ]);
@@ -503,7 +503,7 @@ class BusinessLogger
     }
     
     /**
-     * Track user journey with breadcrumbs
+     * Track user experience with breadcrumbs
      * 
      * Breadcrumbs are crucial for understanding user behavior leading to issues
      */
@@ -519,7 +519,7 @@ class BusinessLogger
             'session_id' => session()->getId(),
         ]);
         
-        // Sentry breadcrumb for user journey tracking
+        // Sentry breadcrumb for user experience tracking
         addBreadcrumb(
             category: 'user.action',
             message: 'Business onboarding started',
@@ -553,7 +553,7 @@ class BusinessLogger
             'timestamp' => now()->toISOString(),
         ]);
 
-        // Add to user journey
+        // Add to user experience
         addBreadcrumb(
             category: 'business.lifecycle',
             message: 'Business created successfully',
@@ -580,7 +580,7 @@ class BusinessLogger
 1. **Dual Logging Strategy**: Both Laravel logs (for audit trails) and Sentry (for real-time monitoring)
 2. **Rich Context**: Every log entry includes business-relevant information
 3. **Performance Awareness**: Automatic detection of slow operations
-4. **User Journey Tracking**: Breadcrumbs build a story of user interactions
+4. **User Experience Tracking**: Breadcrumbs build a story of user interactions
 
 ## Controller Integration Strategy
 
@@ -689,7 +689,7 @@ When something fails, you know:
 - Exactly where it failed (validation vs. database vs. other)
 - What data was being processed
 - How long it took before failing
-- The complete user journey leading to the failure
+- The complete user experience leading to the failure
 
 ### Business Listing Controller: Performance Monitoring
 
@@ -796,10 +796,10 @@ BusinessLogger::applicationError($e, 'business_creation_failed', [
 ]);
 ```
 
-#### 2. **User Journey Reconstruction**
+#### 2. **User Experience Reconstruction**
 Breadcrumbs show what led to the error:
 ```
-User Journey:
+User Experience:
 1. Visited onboarding page
 2. Started form completion
 3. Failed validation on email field
@@ -829,7 +829,7 @@ $transaction?->setData([
 
 #### After: "Database timeout during business creation"
 - Specific error location and type
-- Complete user journey leading to error
+- Complete user experience leading to error
 - Performance metrics showing gradual slowdown
 - Exact input data for reproduction
 
@@ -900,7 +900,7 @@ BusinessLogger::logToSentry(
 - **Rich Context**: Automatic correlation with transactions and user sessions
 - **Advanced Filtering**: Tag-based filtering and search capabilities
 - **Performance Correlation**: Link log events to performance metrics
-- **User Journey Tracking**: See logs in context of user actions
+- **User Experience Tracking**: See logs in context of user actions
 
 ### Implementation Architecture
 
@@ -1093,9 +1093,9 @@ BusinessLogger::criticalBusinessEvent('payment_processor_down', [
 ]);
 ```
 
-#### 2. User Journey Milestones
+#### 2. User Experience Milestones
 ```php
-BusinessLogger::userJourneyMilestone('onboarding_completed', [
+BusinessLogger::userExperienceMilestone('onboarding_completed', [
     'completion_time_minutes' => 12,
     'form_sections_completed' => 4,
     'validation_errors_encountered' => 2,
@@ -1426,7 +1426,7 @@ Create custom dashboards for:
 - **Business Operations**: Onboarding funnel, completion rates
 - **Performance Monitoring**: Response times, database performance
 - **Error Tracking**: Validation errors, system failures
-- **User Journey**: Session flows, abandonment points
+- **User Experience**: Session flows, abandonment points
 
 ### Troubleshooting Common Issues
 
@@ -1920,7 +1920,7 @@ BusinessLogger::performanceMetric('welcome_page_render', $responseTime);
 - Page load times and rendering performance
 - Referrer information for traffic source analysis
 - User agent data for device/browser analytics
-- Session tracking for user journey mapping
+- Session tracking for user experience mapping
 
 #### 2. Call-to-Action (CTA) Conversion Tracking
 ```php
@@ -2033,7 +2033,7 @@ if ($conversionRate < 0.1) { // Less than 10%
 
 #### Key Questions Our Instrumentation Answers
 
-1. **User Journey Analysis**
+1. **User Experience Analysis**
    - Where do users come from before reaching our welcome page?
    - Which CTAs are most effective?
    - What's the conversion rate from welcome page to business listing?
@@ -2194,7 +2194,7 @@ try {
 } catch (Exception $e) {
     BusinessLogger::applicationError($e, 'business_creation', [
         'data' => $data,
-        'user_journey' => session('breadcrumbs'),
+        'user_experience' => session('breadcrumbs'),
         'performance_context' => ['db_queries' => DB::getQueryLog()],
     ]);
 }
@@ -2603,7 +2603,7 @@ alerts:
 
 #### For Product Managers
 - **Conversion Optimization**: A/B test form changes with data
-- **User Journey Insights**: Understand where users struggle
+- **User Experience Insights**: Understand where users struggle
 - **Feature Impact**: Measure how UI changes affect completion rates
 
 #### For Business Stakeholders
@@ -2916,7 +2916,7 @@ alerts:
 
 #### For Product Managers
 - **Conversion Optimization**: A/B test form changes with data
-- **User Journey Insights**: Understand where users struggle
+- **User Experience Insights**: Understand where users struggle
 - **Feature Impact**: Measure how UI changes affect completion rates
 
 #### For Business Stakeholders
@@ -3229,7 +3229,7 @@ alerts:
 
 #### For Product Managers
 - **Conversion Optimization**: A/B test form changes with data
-- **User Journey Insights**: Understand where users struggle
+- **User Experience Insights**: Understand where users struggle
 - **Feature Impact**: Measure how UI changes affect completion rates
 
 #### For Business Stakeholders
@@ -3542,7 +3542,7 @@ alerts:
 
 #### For Product Managers
 - **Conversion Optimization**: A/B test form changes with data
-- **User Journey Insights**: Understand where users struggle
+- **User Experience Insights**: Understand where users struggle
 - **Feature Impact**: Measure how UI changes affect completion rates
 
 #### For Business Stakeholders
@@ -3855,7 +3855,7 @@ alerts:
 
 #### For Product Managers
 - **Conversion Optimization**: A/B test form changes with data
-- **User Journey Insights**: Understand where users struggle
+- **User Experience Insights**: Understand where users struggle
 - **Feature Impact**: Measure how UI changes affect completion rates
 
 #### For Business Stakeholders
@@ -4168,7 +4168,7 @@ alerts:
 
 #### For Product Managers
 - **Conversion Optimization**: A/B test form changes with data
-- **User Journey Insights**: Understand where users struggle
+- **User Experience Insights**: Understand where users struggle
 - **Feature Impact**: Measure how UI changes affect completion rates
 
 #### For Business Stakeholders
@@ -4481,7 +4481,7 @@ alerts:
 
 #### For Product Managers
 - **Conversion Optimization**: A/B test form changes with data
-- **User Journey Insights**: Understand where users struggle
+- **User Experience Insights**: Understand where users struggle
 - **Feature Impact**: Measure how UI changes affect completion rates
 
 #### For Business Stakeholders
@@ -4794,7 +4794,7 @@ alerts:
 
 #### For Product Managers
 - **Conversion Optimization**: A/B test form changes with data
-- **User Journey Insights**: Understand where users struggle
+- **User Experience Insights**: Understand where users struggle
 - **Feature Impact**: Measure how UI changes affect completion rates
 
 #### For Business Stakeholders
@@ -5107,7 +5107,7 @@ alerts:
 
 #### For Product Managers
 - **Conversion Optimization**: A/B test form changes with data
-- **User Journey Insights**: Understand where users struggle
+- **User Experience Insights**: Understand where users struggle
 - **Feature Impact**: Measure how UI changes affect completion rates
 
 #### For Business Stakeholders
@@ -5420,7 +5420,7 @@ alerts:
 
 #### For Product Managers
 - **Conversion Optimization**: A/B test form changes with data
-- **User Journey Insights**: Understand where users struggle
+- **User Experience Insights**: Understand where users struggle
 - **Feature Impact**: Measure how UI changes affect completion rates
 
 #### For Business Stakeholders
@@ -5733,7 +5733,7 @@ alerts:
 
 #### For Product Managers
 - **Conversion Optimization**: A/B test form changes with data
-- **User Journey Insights**: Understand where users struggle
+- **User Experience Insights**: Understand where users struggle
 - **Feature Impact**: Measure how UI changes affect completion rates
 
 #### For Business Stakeholders
@@ -6046,7 +6046,7 @@ alerts:
 
 #### For Product Managers
 - **Conversion Optimization**: A/B test form changes with data
-- **User Journey Insights**: Understand where users struggle
+- **User Experience Insights**: Understand where users struggle
 - **Feature Impact**: Measure how UI changes affect completion rates
 
 #### For Business Stakeholders
