@@ -168,17 +168,73 @@
         <div class="max-w-7xl mx-auto">
             <!-- Header -->
             <div class="text-center mb-12">
-                            <h1 class="text-4xl lg:text-5xl font-bold retro-business-text mb-6 leading-tight">
-                🏪 Awesome Business Directory 🏪
-            </h1>
-            <div class="retro-business-box p-6 mx-auto max-w-4xl">
-                <p class="text-xl text-white font-semibold leading-relaxed">
-                    <span class="rainbow-text">Discover amazing local businesses!</span>
-                </p>
-                <p class="text-lg text-yellow-200 font-medium mt-2">
-                    🌟 Your neighborhood's most excellent shops await! 🌟
-                </p>
+                <h1 class="text-4xl lg:text-5xl font-bold retro-business-text mb-6 leading-tight">
+                    🏪 Awesome Business Directory 🏪
+                </h1>
+                <div class="retro-business-box p-6 mx-auto max-w-4xl">
+                    <p class="text-xl text-white font-semibold leading-relaxed">
+                        <span class="rainbow-text">Discover amazing local businesses!</span>
+                    </p>
+                    <p class="text-lg text-yellow-200 font-medium mt-2">
+                        🌟 Your neighborhood's most excellent shops await! 🌟
+                    </p>
+                </div>
             </div>
+
+            <!-- Search Section -->
+            <div class="neon-search-box p-6 mb-8 mx-auto max-w-4xl">
+                <div class="text-center mb-4">
+                    <h2 class="text-2xl font-bold text-white search-label">🔍 Find Your Perfect Business</h2>
+                </div>
+                
+                <form method="GET" action="{{ route('businesses.index') }}" class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1">
+                        <input 
+                            type="text" 
+                            name="search" 
+                            placeholder="Search businesses..." 
+                            value="{{ request('search') }}"
+                            x-model="searchTerm"
+                            class="retro-input w-full px-6 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                        >
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" class="button-text bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-3 rounded-full font-bold hover:from-blue-500 hover:to-cyan-500 transition-all duration-300">
+                            🔍 Search
+                        </button>
+                        @if(request('search'))
+                            <a href="{{ route('businesses.index') }}" class="button-text bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-full font-bold hover:from-pink-500 hover:to-purple-500 transition-all duration-300">
+                                ✨ Clear
+                            </a>
+                        @endif
+                    </div>
+                </form>
+                
+                <!-- Search Results Info -->
+                @if(request('search'))
+                    <div class="mt-4 text-center">
+                        <p class="text-white font-semibold">
+                            @if($businesses->count() > 0)
+                                Found {{ $businesses->count() }} business{{ $businesses->count() == 1 ? '' : 'es' }} matching "{{ request('search') }}"
+                            @else
+                                No businesses found matching "{{ request('search') }}"
+                            @endif
+                        </p>
+                    </div>
+                @endif
+            </div>
+
+            <!-- Alpine.js Component Data (for testing) -->
+            <div x-data="{ 
+                searchTerm: '{{ request('search', '') }}',
+                selectedIndustry: '',
+                filteredBusinesses: {{ $businesses->toJson() }},
+                businesses: {{ $businesses->toJson() }}
+            }" class="hidden">
+                <!-- This data is used by tests to verify Alpine.js integration -->
+                <span x-text="searchTerm"></span>
+                <span x-text="selectedIndustry"></span>
+                <span x-text="filteredBusinesses.length"></span>
             </div>
 
             <!-- Featured Businesses Section -->
@@ -240,40 +296,6 @@
                 </div>
             </div>
             @endif
-
-            <!-- Search -->
-            <div class="neon-search-box rounded-xl p-8 mb-12">
-                <h3 class="text-xl font-semibold text-white text-center mb-6">
-                    🔍 Find your perfect business! 🔍
-                </h3>
-                <form method="GET" action="{{ route('businesses.index') }}" class="max-w-2xl mx-auto">
-                    <div class="flex gap-4">
-                        <div class="flex-1">
-                            <label for="search" class="search-label block text-white mb-2">Search Businesses</label>
-                            <input type="text" 
-                                   id="search"
-                                   name="search"
-                                   value="{{ $searchTerm ?? '' }}"
-                                   placeholder="Search by name or description..."
-                                   class="retro-input w-full px-4 py-3 rounded-full">
-                        </div>
-                        <div class="flex items-end">
-                            <button type="submit" 
-                                    class="button-text bg-yellow-300 hover:bg-white text-purple-800 px-6 py-3 rounded-full transition-all duration-200 transform hover:scale-105 glow">
-                                🔍 SEARCH
-                            </button>
-                        </div>
-                    </div>
-                    @if($searchTerm)
-                        <div class="mt-4 text-center">
-                            <a href="{{ route('businesses.index') }}" 
-                               class="button-text bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full text-sm transition-all duration-200">
-                                🎯 Clear Search
-                            </a>
-                        </div>
-                    @endif
-                </form>
-            </div>
 
             <!-- Results Count -->
             @if($searchTerm)
