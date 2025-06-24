@@ -41,7 +41,8 @@
             <form action="{{ route('business.onboard.step.store', $step) }}" method="POST" 
                   class="space-y-8" 
                   data-form="onboarding_step_{{ $step }}"
-                  id="onboarding-step-{{ $step }}-form">
+                  id="onboarding-step-{{ $step }}-form"
+                  onsubmit="handleFormSubmission(event)">
                 @csrf
 
                 <!-- Basic Information Section -->
@@ -147,4 +148,32 @@
         </div>
     </div>
 </div>
+
+<script>
+function handleFormSubmission(event) {
+    try {
+        const form = event.target;
+        const formName = form.getAttribute('data-form') || 'onboarding_step_1';
+        
+        // Import distributed tracing functionality
+        if (window.SentryTracing && window.SentryTracing.trackFormSubmission) {
+            const { transaction, traceHeaders } = window.SentryTracing.trackFormSubmission(form, formName);
+            
+            // Add trace headers to form data if available
+            if (traceHeaders && Object.keys(traceHeaders).length > 0) {
+                // Add hidden inputs for trace headers
+                Object.entries(traceHeaders).forEach(([key, value]) => {
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = `trace_${key.replace('-', '_')}`;
+                    hiddenInput.value = value;
+                    form.appendChild(hiddenInput);
+                });
+            }
+        }
+    } catch (error) {
+        console.warn('Form submission tracking failed:', error);
+    }
+}
+</script>
 @endsection 

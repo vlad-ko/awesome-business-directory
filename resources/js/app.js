@@ -14,9 +14,31 @@ document.addEventListener('DOMContentLoaded', () => {
 // Welcome Page Component
 Alpine.data('welcomePage', () => ({
     demoStep: 1,
+    progressPercent: 0,
     
     init() {
-        BusinessDirectoryTracking.trackPageView('welcome');
+        try {
+            BusinessDirectoryTracking.trackPageView('welcome');
+            this.$watch('demoStep', (step) => {
+                this.progressPercent = (step / 3) * 100;
+                BusinessDirectoryTracking.trackFormProgression('demo_step', step, {
+                    progress_percent: this.progressPercent
+                });
+            });
+        } catch (error) {
+            console.error('Welcome page initialization error:', error);
+        }
+    },
+    
+    trackCTA(action) {
+        try {
+            BusinessDirectoryTracking.trackUserInteraction(action, {
+                source: 'welcome_page',
+                position: 'cta'
+            });
+        } catch (error) {
+            console.error('CTA tracking error:', error);
+        }
     }
 }));
 
@@ -73,42 +95,141 @@ Alpine.data('businessDirectory', () => ({
 }));
 
 // Business Onboarding Form Component
-Alpine.data('businessOnboardingForm', () => ({
+Alpine.data('onboardingForm', () => ({
     currentStep: 1,
-    formData: {},
-    isSubmitting: false,
-    validationErrors: {},
-    
-    init() {
-        BusinessDirectoryTracking.trackFormProgression('onboarding_started', this.currentStep);
+    totalSteps: 4,
+    errors: {},
+    step1: {
+        business_name: '',
+        industry: '',
+        description: ''
+    },
+    step2: {
+        email: '',
+        phone: '',
+        website: ''
+    },
+    step3: {
+        address: '',
+        city: '',
+        hours: ''
+    },
+    step4: {
+        services: '',
+        accepts_appointments: false,
+        verified: false
     },
     
-    async submitStep(stepData) {
-        this.isSubmitting = true;
-        this.validationErrors = {};
-        
+    init() {
         try {
-            const response = await fetch(`/onboard/step/${this.currentStep}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify(stepData)
-            });
+            // Initialize required fields configuration
+            const requiredFields = {
+                1: ['business_name', 'industry', 'description'],
+                2: ['email', 'phone'],
+                3: ['address', 'city'],
+                4: ['services']
+            };
+            this.requiredFields = requiredFields;
             
-            if (response.ok) {
-                this.formData = { ...this.formData, ...stepData };
-                this.currentStep++;
-                BusinessDirectoryTracking.trackFormProgression('step_completed', this.currentStep - 1);
-            } else {
-                const errors = await response.json();
-                this.validationErrors = errors.errors || {};
+            BusinessDirectoryTracking.trackFormProgression('onboarding_started', this.currentStep);
+        } catch (error) {
+            console.error('Onboarding form initialization error:', error);
+            this.errors = { general: 'Failed to initialize form' };
+        }
+    },
+
+    nextStep() {
+        try {
+            if (this.validateCurrentStep()) {
+                if (this.currentStep < this.totalSteps) {
+                    this.currentStep++;
+                    BusinessDirectoryTracking.trackFormProgression('step_completed', this.currentStep - 1);
+                    BusinessDirectoryTracking.trackOnboardingProgress(this.currentStep - 1, this.getStepData(this.currentStep - 1));
+                }
             }
         } catch (error) {
-            console.error('Step submission failed:', error);
-        } finally {
-            this.isSubmitting = false;
+            console.error('Next step error:', error);
+            this.errors = { general: 'Failed to proceed to next step' };
+        }
+    },
+
+    prevStep() {
+        try {
+            if (this.currentStep > 1) {
+                this.currentStep--;
+                BusinessDirectoryTracking.trackFormProgression('step_back', this.currentStep);
+            }
+        } catch (error) {
+            console.error('Previous step error:', error);
+        }
+    },
+
+    validateCurrentStep() {
+        try {
+            this.errors = {};
+            const stepData = this[`step${this.currentStep}`];
+            const required = this.requiredFields[this.currentStep];
+
+            let isValid = true;
+            required.forEach(field => {
+                if (!this.isRequired(field, stepData[field])) {
+                    this.errors[field] = `${this.getFieldLabel(field)} is required`;
+                    isValid = false;
+                }
+            });
+
+            return isValid;
+        } catch (error) {
+            console.error('Validation error:', error);
+            this.errors = { general: 'Validation failed' };
+            return false;
+        }
+    },
+
+    isRequired(field, value) {
+        return value && value.toString().trim().length > 0;
+    },
+
+    getFieldLabel(field) {
+        const labels = {
+            business_name: 'Business Name',
+            industry: 'Industry',
+            description: 'Description',
+            email: 'Email',
+            phone: 'Phone',
+            website: 'Website',
+            address: 'Address',
+            city: 'City',
+            hours: 'Hours',
+            services: 'Services'
+        };
+        return labels[field] || field;
+    },
+
+    getStepData(step) {
+        return this[`step${step}`] || {};
+    },
+
+    trackCTA(action) {
+        try {
+            BusinessDirectoryTracking.trackUserInteraction(action, {
+                source: 'welcome_page',
+                position: 'cta'
+            });
+        } catch (error) {
+            console.error('CTA tracking error:', error);
+        }
+    },
+
+    submitForm() {
+        try {
+            if (this.validateCurrentStep()) {
+                BusinessDirectoryTracking.trackFormProgression('form_submitted', this.totalSteps);
+                // Form submission logic here
+            }
+        } catch (error) {
+            console.error('Form submission error:', error);
+            this.errors = { general: 'Failed to submit form' };
         }
     }
 }));
@@ -116,7 +237,11 @@ Alpine.data('businessOnboardingForm', () => ({
 // Admin Dashboard Component
 Alpine.data('adminDashboard', () => ({
     businesses: [],
-    stats: {},
+    stats: {
+        total: 0,
+        pending: 0,
+        approved: 0
+    },
     selectedBusiness: null,
     isLoading: false,
     
@@ -237,3 +362,25 @@ Alpine.start();
 // Make components available globally for debugging
 window.BusinessDirectoryTracking = BusinessDirectoryTracking;
 window.SentryPerformance = SentryPerformance;
+
+// Initialize form tracking on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Track forms with comprehensive metrics
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        const formName = form.getAttribute('data-form') || form.id || 'unknown';
+        SentryPerformance.trackFormMetrics(form, formName);
+    });
+});
+
+// Enhanced error handling
+window.addEventListener('error', (event) => {
+    try {
+        console.error('Global error:', event.error);
+    } catch (error) {
+        console.warn('Error in global error handler:', error);
+    }
+});
+
+// Initialize comprehensive tracking
+console.log('Alpine.js and Sentry integration initialized');

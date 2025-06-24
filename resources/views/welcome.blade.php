@@ -5,9 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         
         <!-- Sentry Distributed Tracing Meta Tag -->
-        @if(config('sentry.dsn'))
-            <meta name="sentry-trace" content="{{ \Sentry\SentrySdk::getCurrentHub()->getTransaction()?->toTraceparent() ?? '' }}">
-        @endif
+        <meta name="sentry-trace" content="{{ \Sentry\SentrySdk::getCurrentHub()->getTransaction()?->toTraceparent() ?? '' }}">
 
         <title>Discover Amazing Local Businesses - {{ config('app.name', 'Laravel') }}</title>
         
