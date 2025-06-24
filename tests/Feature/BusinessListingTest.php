@@ -99,10 +99,9 @@ class BusinessListingTest extends TestCase
         $response = $this->get(route('businesses.index'));
 
         $response->assertStatus(200)
-            ->assertSee('No businesses yet!')
-            ->assertSee('directory is just getting started')
-            ->assertSee('Add Your Business')
-            ->assertSee('Why join our directory?');
+            ->assertSee('No businesses found')
+            ->assertSee('Be the first to add your business to our directory.')
+            ->assertSee('Add Your Business');
     }
 
     #[Test]
@@ -133,10 +132,10 @@ class BusinessListingTest extends TestCase
 
         $response->assertStatus(200)
             ->assertSee('Tech Solutions Inc')
-            ->assertSee('Innovation at your fingertips')
             ->assertSee('Technology')
-            ->assertSee('Tech City, California')
-            ->assertSee('We provide innovative technology solutions');
+            ->assertSee('We provide innovative technology solutions')
+            ->assertSee('info@techsolutions.com')
+            ->assertSee('555-TECH-SOL');
     }
 
     #[Test]

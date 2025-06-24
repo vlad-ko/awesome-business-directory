@@ -1,342 +1,300 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'Laravel') }} - Discover Amazing Local Businesses</title>
-        <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-            @vite(['resources/css/app.css', 'resources/js/app.js'])
-            <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .neon-glow {
-            box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
-        }
-        .retro-text {
-            text-shadow: 3px 3px 0px #ff6b6b, 6px 6px 0px #4ecdc4;
-        }
-            </style>
-    </head>
-<body class="font-sans antialiased">
-    <div class="min-h-screen gradient-bg">
-        <!-- Header -->
-        <header class="relative z-10">
-            <nav class="container mx-auto px-6 py-4">
-                <div class="flex items-center justify-between">
-                    <div class="text-white font-bold text-2xl">
-                        🏪 Awesome Business Directory
-                    </div>
-                    <div class="space-x-4">
-                        <a href="{{ route('businesses.index') }}" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 backdrop-blur-sm">Browse Businesses</a>
-                        <a href="{{ route('business.onboard.step', 1) }}" class="bg-yellow-400 hover:bg-yellow-300 text-purple-800 px-6 py-2 rounded-full font-bold transition-all duration-200 transform hover:scale-105 neon-glow">Join Directory</a>
-                    </div>
-                </div>
-                </nav>
-        </header>
+@extends('layouts.app')
 
-        <!-- Hero Section -->
-        <main class="container mx-auto px-6 py-12">
-            <!-- Hero Content -->
-            <div class="text-center mb-12">
-                <h1 class="text-3xl lg:text-4xl xl:text-5xl font-bold text-white mb-6 retro-text leading-tight">
-                    Discover Your
-                    <span class="text-yellow-300">Neighborhood</span>
-                    Gems! 💎
+@section('content')
+<div x-data="welcomePage" class="bg-white">
+    <!-- Hero Section -->
+    <div class="relative isolate px-6 pt-14 lg:px-8">
+        <div class="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
+            <div class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)"></div>
+        </div>
+        
+        <div class="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
+            <div class="hidden sm:mb-8 sm:flex sm:justify-center">
+                <div class="relative rounded-full px-3 py-1 text-sm leading-6 text-gray-600 ring-1 ring-gray-900/10 hover:ring-gray-900/20">
+                    Discover amazing local businesses. 
+                    <a href="#features" class="font-semibold text-indigo-600">
+                        <span class="absolute inset-0" aria-hidden="true"></span>
+                        Learn more <span aria-hidden="true">&rarr;</span>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+                    Awesome Business Directory
                 </h1>
-                <p class="text-xl text-purple-100 mb-8 leading-relaxed max-w-2xl mx-auto">
-                    Find amazing local shops, restaurants, and services that make your 
-                    community awesome. 🌟
+                <p class="mt-6 text-lg leading-8 text-gray-600">
+                    Connect with local businesses, discover new services, and grow your community. 
+                    Whether you're a business owner or a customer, we've got you covered.
                 </p>
                 
-                <!-- Call to Action Buttons - Centered -->
-                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-                    <a href="{{ route('businesses.index') }}" 
-                       class="bg-pink-500 hover:bg-pink-400 text-white px-8 py-4 rounded-full font-bold text-lg transition-all duration-200 transform hover:scale-105 neon-glow">
-                        🔍 Explore Businesses
+                <div class="mt-10 flex items-center justify-center gap-x-6">
+                    <a href="/businesses" 
+                       x-track='{"action": "browse_businesses", "source": "hero_cta", "position": "primary"}'
+                       class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors duration-200">
+                        Browse Businesses
                     </a>
-                    <a href="{{ route('business.onboard.step', 1) }}" 
-                       class="bg-transparent border-2 border-yellow-300 text-yellow-300 hover:bg-yellow-300 hover:text-purple-800 px-8 py-4 rounded-full font-bold text-lg transition-all duration-200">
-                        🚀 List Your Business
+                    <a href="/onboard" 
+                       x-track='{"action": "add_business", "source": "hero_cta", "position": "secondary"}'
+                       class="text-sm font-semibold leading-6 text-gray-900 hover:text-indigo-600 transition-colors duration-200">
+                        Add Your Business <span aria-hidden="true">→</span>
                     </a>
                 </div>
             </div>
-        </main>
-
-        <!-- Full Width SVG - Outside Container -->
-        <div class="w-full mb-16">
-            <svg width="100%" height="300" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-2xl w-full" preserveAspectRatio="xMidYMid meet">
-                        <!-- Sky with gradient -->
-                        <defs>
-                            <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#FFB6C1;stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="sunGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#FFA500;stop-opacity:1" />
-                            </linearGradient>
-                        </defs>
-                        
-                        <!-- Sky background -->
-                        <rect width="800" height="180" fill="url(#skyGradient)"/>
-                        
-                        <!-- Sun -->
-                        <circle cx="650" cy="60" r="30" fill="url(#sunGradient)" opacity="0.9"/>
-                        <circle cx="650" cy="60" r="35" fill="none" stroke="#FFD700" stroke-width="2" opacity="0.5"/>
-                        <circle cx="650" cy="60" r="40" fill="none" stroke="#FFD700" stroke-width="1" opacity="0.3"/>
-                        
-                        <!-- Clouds -->
-                        <ellipse cx="100" cy="40" rx="25" ry="12" fill="white" opacity="0.8"/>
-                        <ellipse cx="115" cy="35" rx="20" ry="10" fill="white" opacity="0.8"/>
-                        <ellipse cx="250" cy="50" rx="30" ry="15" fill="white" opacity="0.7"/>
-                        <ellipse cx="270" cy="45" rx="22" ry="11" fill="white" opacity="0.7"/>
-                        <ellipse cx="500" cy="35" rx="28" ry="14" fill="white" opacity="0.6"/>
-                        <ellipse cx="520" cy="30" rx="20" ry="10" fill="white" opacity="0.6"/>
-                        
-                        <!-- Ground -->
-                        <rect x="0" y="180" width="800" height="120" fill="#90EE90"/>
-                        
-                        <!-- Street -->
-                        <rect x="0" y="240" width="800" height="30" fill="#696969"/>
-                        <rect x="0" y="253" width="800" height="3" fill="#FFFF00"/>
-                        
-                        <!-- Building 1 - Pizza Shop -->
-                        <rect x="80" y="130" width="70" height="50" fill="#FF6B6B"/>
-                        <rect x="88" y="138" width="12" height="15" fill="#87CEEB"/>
-                        <rect x="105" y="138" width="12" height="15" fill="#87CEEB"/>
-                        <rect x="122" y="138" width="12" height="15" fill="#87CEEB"/>
-                        <rect x="95" y="158" width="25" height="22" fill="#8B4513"/>
-                        <polygon points="80,130 115,110 150,130" fill="#FF1493"/>
-                        <text x="115" y="105" text-anchor="middle" fill="#4c1d95" font-size="10" font-weight="bold">🍕 PIZZA</text>
-                        
-                        <!-- Building 2 - Coffee Shop -->
-                        <rect x="170" y="140" width="60" height="40" fill="#4ECDC4"/>
-                        <rect x="178" y="148" width="10" height="12" fill="#87CEEB"/>
-                        <rect x="192" y="148" width="10" height="12" fill="#87CEEB"/>
-                        <rect x="206" y="148" width="10" height="12" fill="#87CEEB"/>
-                        <rect x="185" y="165" width="20" height="15" fill="#8B4513"/>
-                        <polygon points="170,140 200,125 230,140" fill="#9B59B6"/>
-                        <text x="200" y="120" text-anchor="middle" fill="#4c1d95" font-size="9" font-weight="bold">☕ CAFÉ</text>
-                        
-                        <!-- Building 3 - Bookstore -->
-                        <rect x="250" y="125" width="65" height="55" fill="#F39C12"/>
-                        <rect x="258" y="133" width="12" height="16" fill="#87CEEB"/>
-                        <rect x="275" y="133" width="12" height="16" fill="#87CEEB"/>
-                        <rect x="292" y="133" width="12" height="16" fill="#87CEEB"/>
-                        <rect x="265" y="155" width="24" height="25" fill="#8B4513"/>
-                        <polygon points="250,125 282.5,105 315,125" fill="#E74C3C"/>
-                        <text x="282" y="100" text-anchor="middle" fill="#4c1d95" font-size="9" font-weight="bold">📚 BOOKS</text>
-                        
-                        <!-- Building 4 - Flower Shop -->
-                        <rect x="335" y="135" width="55" height="45" fill="#FF69B4"/>
-                        <rect x="343" y="143" width="10" height="14" fill="#87CEEB"/>
-                        <rect x="358" y="143" width="10" height="14" fill="#87CEEB"/>
-                        <rect x="373" y="143" width="10" height="14" fill="#87CEEB"/>
-                        <rect x="350" y="162" width="20" height="18" fill="#8B4513"/>
-                        <polygon points="335,135 362.5,120 390,135" fill="#32CD32"/>
-                        <text x="362" y="115" text-anchor="middle" fill="#4c1d95" font-size="8" font-weight="bold">🌸 FLOWERS</text>
-                        
-                        <!-- Building 5 - Bakery -->
-                        <rect x="410" y="145" width="50" height="35" fill="#DDA0DD"/>
-                        <rect x="418" y="153" width="8" height="12" fill="#87CEEB"/>
-                        <rect x="430" y="153" width="8" height="12" fill="#87CEEB"/>
-                        <rect x="442" y="153" width="8" height="12" fill="#87CEEB"/>
-                        <rect x="425" y="168" width="16" height="12" fill="#8B4513"/>
-                        <polygon points="410,145 435,130 460,145" fill="#FFD700"/>
-                        <text x="435" y="125" text-anchor="middle" fill="#4c1d95" font-size="8" font-weight="bold">🥖 BAKERY</text>
-                        
-                        <!-- Building 6 - New Shop -->
-                        <rect x="480" y="140" width="55" height="40" fill="#9370DB"/>
-                        <rect x="488" y="148" width="10" height="12" fill="#87CEEB"/>
-                        <rect x="503" y="148" width="10" height="12" fill="#87CEEB"/>
-                        <rect x="518" y="148" width="10" height="12" fill="#87CEEB"/>
-                        <rect x="495" y="165" width="18" height="15" fill="#8B4513"/>
-                        <polygon points="480,140 507.5,125 535,140" fill="#FF6347"/>
-                        <text x="507" y="120" text-anchor="middle" fill="#4c1d95" font-size="8" font-weight="bold">🛍️ SHOP</text>
-                        
-                        <!-- Building 7 - Gym -->
-                        <rect x="555" y="135" width="60" height="45" fill="#32CD32"/>
-                        <rect x="563" y="143" width="11" height="14" fill="#87CEEB"/>
-                        <rect x="579" y="143" width="11" height="14" fill="#87CEEB"/>
-                        <rect x="595" y="143" width="11" height="14" fill="#87CEEB"/>
-                        <rect x="572" y="162" width="22" height="18" fill="#8B4513"/>
-                        <polygon points="555,135 585,120 615,135" fill="#FF4500"/>
-                        <text x="585" y="115" text-anchor="middle" fill="#4c1d95" font-size="8" font-weight="bold">💪 GYM</text>
-                        
-                        <!-- Background Trees -->
-                        <circle cx="40" cy="170" r="15" fill="#228B22"/>
-                        <rect x="38" y="170" width="4" height="18" fill="#8B4513"/>
-                        
-                        <circle cx="680" cy="165" r="12" fill="#228B22"/>
-                        <rect x="678" y="165" width="4" height="15" fill="#8B4513"/>
-                        
-                        <circle cx="750" cy="168" r="14" fill="#228B22"/>
-                        <rect x="748" y="168" width="4" height="17" fill="#8B4513"/>
-                        
-                        <!-- Car -->
-                        <g transform="translate(300,220)">
-                            <!-- Car body -->
-                            <rect x="0" y="0" width="45" height="15" rx="3" fill="#FF6347"/>
-                            <!-- Car top -->
-                            <rect x="8" y="-8" width="25" height="8" rx="2" fill="#FF4500"/>
-                            <!-- Windows -->
-                            <rect x="10" y="-6" width="8" height="6" fill="#87CEEB" opacity="0.7"/>
-                            <rect x="20" y="-6" width="8" height="6" fill="#87CEEB" opacity="0.7"/>
-                            <!-- Wheels -->
-                            <circle cx="8" cy="18" r="4" fill="#2F4F4F"/>
-                            <circle cx="37" cy="18" r="4" fill="#2F4F4F"/>
-                            <circle cx="8" cy="18" r="2" fill="#C0C0C0"/>
-                            <circle cx="37" cy="18" r="2" fill="#C0C0C0"/>
-                        </g>
-                        
-                        <!-- Fire Hydrant -->
-                        <g transform="translate(150,225)">
-                            <!-- Base -->
-                            <rect x="0" y="10" width="8" height="15" fill="#FF0000"/>
-                            <!-- Top -->
-                            <rect x="-1" y="8" width="10" height="4" fill="#FF0000"/>
-                            <!-- Cap -->
-                            <rect x="1" y="6" width="6" height="3" fill="#FFD700"/>
-                            <!-- Side outlets -->
-                            <rect x="-2" y="12" width="3" height="2" fill="#C0C0C0"/>
-                            <rect x="7" y="12" width="3" height="2" fill="#C0C0C0"/>
-                        </g>
-                        
-                        <!-- Dog Walker -->
-                        <g transform="translate(450,210)">
-                            <!-- Person -->
-                            <circle cx="0" cy="-12" r="4" fill="#FDBCB4"/>
-                            <ellipse cx="0" cy="-4" rx="5" ry="8" fill="#4169E1"/>
-                            <ellipse cx="-8" cy="-6" rx="2" ry="6" fill="#FDBCB4" transform="rotate(-15)"/>
-                            <ellipse cx="8" cy="-6" rx="2" ry="6" fill="#FDBCB4" transform="rotate(15)"/>
-                            <ellipse cx="-3" cy="8" rx="2" ry="8" fill="#4169E1"/>
-                            <ellipse cx="3" cy="8" rx="2" ry="8" fill="#4169E1"/>
-                            <!-- Dog -->
-                            <ellipse cx="15" cy="8" rx="6" ry="4" fill="#8B4513"/>
-                            <circle cx="20" cy="6" r="3" fill="#8B4513"/>
-                            <ellipse cx="22" cy="5" rx="1" ry="2" fill="#8B4513"/>
-                            <ellipse cx="22" cy="3" rx="1" ry="2" fill="#8B4513"/>
-                            <rect x="9" y="10" width="1" height="4" fill="#8B4513"/>
-                            <rect x="12" y="10" width="1" height="4" fill="#8B4513"/>
-                            <rect x="18" y="10" width="1" height="4" fill="#8B4513"/>
-                            <rect x="21" y="10" width="1" height="4" fill="#8B4513"/>
-                            <!-- Leash -->
-                            <path d="M 6,-2 Q 12,2 15,6" stroke="#000000" stroke-width="1" fill="none"/>
-                        </g>
-                        
-                        <!-- Roller Skater (repositioned) -->
-                        <g transform="translate(550,215)">
-                            <!-- Body -->
-                            <ellipse cx="0" cy="0" rx="6" ry="9" fill="#FF1493"/>
-                            <!-- Head -->
-                            <circle cx="0" cy="-12" r="4" fill="#FDBCB4"/>
-                            <!-- Hair -->
-                            <path d="M -4,-16 Q 0,-20 4,-16" fill="#FFD700"/>
-                            <!-- Arms -->
-                            <ellipse cx="-8" cy="-3" rx="2" ry="6" fill="#FDBCB4" transform="rotate(-20)"/>
-                            <ellipse cx="8" cy="-3" rx="2" ry="6" fill="#FDBCB4" transform="rotate(20)"/>
-                            <!-- Legs -->
-                            <ellipse cx="-4" cy="12" rx="2" ry="8" fill="#4169E1"/>
-                            <ellipse cx="4" cy="12" rx="2" ry="8" fill="#4169E1"/>
-                            <!-- Roller Skates -->
-                            <ellipse cx="-4" cy="22" rx="6" ry="3" fill="#FF6347"/>
-                            <ellipse cx="4" cy="22" rx="6" ry="3" fill="#FF6347"/>
-                            <!-- Wheels -->
-                            <circle cx="-7" cy="24" r="1.5" fill="#FFD700"/>
-                            <circle cx="-1" cy="24" r="1.5" fill="#FFD700"/>
-                            <circle cx="1" cy="24" r="1.5" fill="#FFD700"/>
-                            <circle cx="7" cy="24" r="1.5" fill="#FFD700"/>
-                        </g>
-                        
-                        <!-- Motion lines -->
-                        <path d="M 540,220 Q 535,215 530,220" stroke="#FF1493" stroke-width="1" fill="none" opacity="0.6"/>
-                        <path d="M 535,225 Q 530,220 525,225" stroke="#FF1493" stroke-width="1" fill="none" opacity="0.4"/>
-                        
-                        <!-- Street lamp -->
-                        <rect x="200" y="185" width="2" height="40" fill="#2F4F4F"/>
-                        <circle cx="201" y="182" r="6" fill="#FFD700" opacity="0.8"/>
-                        
-                        <!-- Foreground Tree (Large) -->
-                        <g transform="translate(20,200)">
-                            <rect x="0" y="0" width="8" height="30" fill="#8B4513"/>
-                            <circle cx="4" cy="-5" r="18" fill="#228B22"/>
-                            <circle cx="-8" cy="-8" r="12" fill="#228B22"/>
-                            <circle cx="16" cy="-10" r="14" fill="#228B22"/>
-                            <circle cx="4" cy="-20" r="15" fill="#228B22"/>
-                        </g>
-                        
-                        <!-- Retro style decorative elements -->
-                        <circle cx="50" cy="50" r="3" fill="#FF69B4" opacity="0.7"/>
-                        <circle cx="450" cy="60" r="4" fill="#00CED1" opacity="0.6"/>
-                        <circle cx="100" cy="30" r="2" fill="#FFD700" opacity="0.8"/>
-                        <circle cx="350" cy="40" r="3" fill="#FF1493" opacity="0.7"/>
-                        
-                        <!-- Sparkles -->
-                        <g fill="#FFD700" opacity="0.8">
-                            <polygon points="80,120 82,125 87,125 83,128 85,133 80,130 75,133 77,128 73,125 78,125" />
-                            <polygon points="320,110 322,115 327,115 323,118 325,123 320,120 315,123 317,118 313,115 318,115" />
-                            <polygon points="420,130 422,135 427,135 423,138 425,143 420,140 415,143 417,138 413,135 418,135" />
-                        </g>
-                    </svg>
         </div>
-
-        <!-- Features Section -->
-        <section class="py-16 bg-gradient-to-br from-slate-800 via-blue-900 to-indigo-900">
-            <div class="container mx-auto px-6">
-                <h2 class="text-4xl font-bold text-gray-200 text-center mb-12">
-                    Why Our Directory Rocks! 🎉
-                </h2>
-                <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-                    <div class="bg-white/10 backdrop-blur-md rounded-xl p-8 text-center hover:bg-white/20 transition-all duration-300 hover:scale-105">
-                        <div class="text-5xl mb-4">🏪</div>
-                        <h3 class="text-xl font-bold text-gray-200 mb-3">Local Businesses</h3>
-                        <p class="text-gray-300 leading-relaxed">Discover amazing shops, restaurants, and services right in your neighborhood!</p>
-                    </div>
-                    <div class="bg-white/10 backdrop-blur-md rounded-xl p-8 text-center hover:bg-white/20 transition-all duration-300 hover:scale-105">
-                        <div class="text-5xl mb-4">⭐</div>
-                        <h3 class="text-xl font-bold text-gray-200 mb-3">Verified Quality</h3>
-                        <p class="text-gray-300 leading-relaxed">All businesses are carefully reviewed to ensure you get the best experience!</p>
-                    </div>
-                    <div class="bg-white/10 backdrop-blur-md rounded-xl p-8 text-center hover:bg-white/20 transition-all duration-300 hover:scale-105">
-                        <div class="text-5xl mb-4">🚀</div>
-                        <h3 class="text-xl font-bold text-gray-200 mb-3">Easy to Use</h3>
-                        <p class="text-gray-300 leading-relaxed">Simple, fast, and fun way to explore what your community has to offer!</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Call to Action Section -->
-        <section class="py-16 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-            <div class="container mx-auto px-6 text-center">
-                <div class="bg-white/10 backdrop-blur-md rounded-3xl p-12 max-w-3xl mx-auto border border-white/20">
-                    <h2 class="text-4xl font-bold text-gray-200 mb-6">Ready to Join the Fun? 🎊</h2>
-                    <p class="text-xl text-gray-300 mb-8 leading-relaxed">Whether you're looking for businesses or want to list your own, we've got you covered!</p>
-                    <div class="flex flex-col sm:flex-row gap-6 justify-center">
-                        <a href="{{ route('businesses.index') }}" 
-                           class="bg-yellow-400 hover:bg-yellow-300 text-purple-800 px-10 py-4 rounded-full font-bold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg">
-                            Start Exploring 🔍
-                        </a>
-                        <a href="{{ route('business.onboard') }}" 
-                           class="bg-pink-500 hover:bg-pink-400 text-white px-10 py-4 rounded-full font-bold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg">
-                            List Your Business 📝
-                        </a>
-                    </div>
-                </div>
+        
+        <div class="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]" aria-hidden="true">
+            <div class="relative left-[calc(50%+3rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%+36rem)] sm:w-[72.1875rem]" style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)"></div>
         </div>
-                 </section>
+    </div>
 
-        <!-- Footer -->
-        <footer class="py-12 bg-gradient-to-r from-gray-900 via-slate-800 to-gray-900 border-t border-white/10">
-            <div class="container mx-auto px-6 text-center">
-                <p class="text-gray-300 text-lg">
-                    Made with 💜 for awesome local communities | 
-                    <span class="text-yellow-400 font-semibold">{{ config('app.name', 'Awesome Business Directory') }}</span>
+    <!-- Features Section -->
+    <div id="features" class="py-24 sm:py-32">
+        <div class="mx-auto max-w-7xl px-6 lg:px-8">
+            <div class="mx-auto max-w-2xl lg:text-center">
+                <h2 class="text-base font-semibold leading-7 text-indigo-600">Everything you need</h2>
+                <p class="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                    Comprehensive business directory platform
+                </p>
+                <p class="mt-6 text-lg leading-8 text-gray-600">
+                    Built with modern technologies and comprehensive monitoring to ensure the best experience for both businesses and customers.
                 </p>
             </div>
-        </footer>
+            
+            <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-4xl">
+                <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-2 lg:gap-y-16">
+                    <div class="relative pl-16">
+                        <dt class="text-base font-semibold leading-7 text-gray-900">
+                            <div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600">
+                                <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                                </svg>
+                            </div>
+                            Fast & Reliable
+                        </dt>
+                        <dd class="mt-2 text-base leading-7 text-gray-600">
+                            Built with Laravel and optimized for performance. Real-time monitoring ensures everything runs smoothly.
+                        </dd>
+                    </div>
+                    
+                    <div class="relative pl-16">
+                        <dt class="text-base font-semibold leading-7 text-gray-900">
+                            <div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600">
+                                <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.623 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                                </svg>
+                            </div>
+                            Secure & Monitored
+                        </dt>
+                        <dd class="mt-2 text-base leading-7 text-gray-600">
+                            Enterprise-grade security with comprehensive error tracking and performance monitoring via Sentry.
+                        </dd>
+                    </div>
+                    
+                    <div class="relative pl-16">
+                        <dt class="text-base font-semibold leading-7 text-gray-900">
+                            <div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600">
+                                <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                </svg>
+                            </div>
+                            User-Friendly
+                        </dt>
+                        <dd class="mt-2 text-base leading-7 text-gray-600">
+                            Intuitive interface powered by Alpine.js for smooth interactions and seamless user experience.
+                        </dd>
+                    </div>
+                    
+                    <div class="relative pl-16">
+                        <dt class="text-base font-semibold leading-7 text-gray-900">
+                            <div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600">
+                                <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                                </svg>
+                            </div>
+                            Analytics & Insights
+                        </dt>
+                        <dd class="mt-2 text-base leading-7 text-gray-600">
+                            Comprehensive analytics and business insights to help you understand user behavior and optimize performance.
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
     </div>
-    </body>
-</html>
+
+    <!-- Demo Section -->
+    <div class="bg-gray-50 py-24 sm:py-32">
+        <div class="mx-auto max-w-7xl px-6 lg:px-8">
+            <div class="mx-auto max-w-2xl lg:text-center">
+                <h2 class="text-base font-semibold leading-7 text-indigo-600">Interactive Demo</h2>
+                <p class="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                    See it in action
+                </p>
+                <p class="mt-6 text-lg leading-8 text-gray-600">
+                    Experience our platform's features with this interactive demo. All interactions are tracked and monitored.
+                </p>
+            </div>
+            
+            <!-- Interactive Demo Component -->
+            <div x-data="{ 
+                demoStep: 1, 
+                businessName: '', 
+                searchTerm: '',
+                showSuccess: false,
+                
+                nextStep() {
+                    this.demoStep++;
+                    if (this.demoStep > 3) {
+                        this.showSuccess = true;
+                        setTimeout(() => {
+                            this.resetDemo();
+                        }, 3000);
+                    }
+                },
+                
+                resetDemo() {
+                    this.demoStep = 1;
+                    this.businessName = '';
+                    this.searchTerm = '';
+                    this.showSuccess = false;
+                }
+            }" class="mt-16">
+                
+                <div class="mx-auto max-w-2xl">
+                    <!-- Demo Progress -->
+                    <div class="mb-8">
+                        <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+                            <span>Demo Progress</span>
+                            <span x-text="`${demoStep}/3`"></span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-indigo-600 h-2 rounded-full transition-all duration-500" 
+                                 :style="`width: ${(demoStep / 3) * 100}%`"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Demo Steps -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <!-- Step 1: Business Search -->
+                        <div x-show="demoStep === 1" x-transition>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                Step 1: Search for Businesses
+                            </h3>
+                            <div class="space-y-4">
+                                <input type="text" 
+                                       x-model="searchTerm"
+                                       x-track='{"action": "demo_search", "step": 1}'
+                                       placeholder="Try searching for 'restaurant' or 'coffee'"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <button @click="nextStep()" 
+                                        x-track='{"action": "demo_next_step", "from_step": 1}'
+                                        :disabled="!searchTerm"
+                                        :class="searchTerm ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-300 cursor-not-allowed'"
+                                        class="w-full px-4 py-2 text-white rounded-md transition-colors">
+                                    Continue to Step 2
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 2: Add Business -->
+                        <div x-show="demoStep === 2" x-transition>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                Step 2: Add Your Business
+                            </h3>
+                            <div class="space-y-4">
+                                <input type="text" 
+                                       x-model="businessName"
+                                       x-track='{"action": "demo_business_name", "step": 2}'
+                                       placeholder="Enter your business name"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <select x-track='{"action": "demo_industry_select", "step": 2}'
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <option value="">Select Industry</option>
+                                    <option value="restaurant">Restaurant</option>
+                                    <option value="retail">Retail</option>
+                                    <option value="services">Services</option>
+                                    <option value="technology">Technology</option>
+                                </select>
+                                <button @click="nextStep()" 
+                                        x-track='{"action": "demo_next_step", "from_step": 2}'
+                                        :disabled="!businessName"
+                                        :class="businessName ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-300 cursor-not-allowed'"
+                                        class="w-full px-4 py-2 text-white rounded-md transition-colors">
+                                    Continue to Step 3
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 3: Contact Information -->
+                        <div x-show="demoStep === 3" x-transition>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                Step 3: Contact Information
+                            </h3>
+                            <div class="space-y-4">
+                                <input type="email" 
+                                       x-track='{"action": "demo_email_input", "step": 3}'
+                                       placeholder="business@example.com"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="tel" 
+                                       x-track='{"action": "demo_phone_input", "step": 3}'
+                                       placeholder="(555) 123-4567"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <button @click="nextStep()" 
+                                        x-track='{"action": "demo_complete", "business_name": businessName}'
+                                        class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors">
+                                    Complete Demo
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Success Message -->
+                        <div x-show="showSuccess" x-transition>
+                            <div class="text-center">
+                                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Demo Completed!</h3>
+                                <p class="text-gray-600 mb-4">
+                                    Great job! All your interactions have been tracked and analyzed.
+                                </p>
+                                <p class="text-sm text-gray-500">
+                                    Resetting demo in 3 seconds...
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="bg-indigo-600">
+        <div class="px-6 py-24 sm:px-6 sm:py-32 lg:px-8">
+            <div class="mx-auto max-w-2xl text-center">
+                <h2 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                    Ready to get started?
+                </h2>
+                <p class="mx-auto mt-6 max-w-xl text-lg leading-8 text-indigo-200">
+                    Join our growing community of businesses and customers. Start your experience today.
+                </p>
+                <div class="mt-10 flex items-center justify-center gap-x-6">
+                    <a href="/onboard" 
+                       x-track='{"action": "add_business", "source": "bottom_cta", "position": "primary"}'
+                       class="rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors duration-200">
+                        Add Your Business
+                    </a>
+                    <a href="/businesses" 
+                       x-track='{"action": "browse_businesses", "source": "bottom_cta", "position": "secondary"}'
+                       class="text-sm font-semibold leading-6 text-white hover:text-indigo-200 transition-colors duration-200">
+                        Browse Directory <span aria-hidden="true">→</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection 

@@ -7,6 +7,27 @@
 
     <title>{{ config('app.name', 'Awesome Business Directory') }}</title>
 
+    <!-- Sentry Configuration -->
+    <script>
+        window.sentryConfig = {
+            dsn: '{{ config('sentry.dsn') }}',
+            environment: '{{ app()->environment() }}',
+            tracesSampleRate: 1.0,
+            release: '{{ config('app.version', '1.0.0') }}'
+        };
+        
+        // User context for Sentry
+        @auth
+        window.userContext = {
+            id: '{{ auth()->id() }}',
+            email: '{{ auth()->user()->email }}',
+            is_admin: {{ auth()->user()->is_admin ? 'true' : 'false' }}
+        };
+        @else
+        window.userContext = null;
+        @endauth
+    </script>
+
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
