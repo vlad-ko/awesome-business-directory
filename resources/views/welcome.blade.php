@@ -34,7 +34,7 @@
                        class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors duration-200">
                         Browse Businesses
                     </a>
-                    <a href="/onboard" 
+                    <a href="{{ route('business.onboard.step', 1) }}" 
                        x-track='{"action": "add_business", "source": "hero_cta", "position": "secondary"}'
                        class="text-sm font-semibold leading-6 text-gray-900 hover:text-indigo-600 transition-colors duration-200">
                         Add Your Business <span aria-hidden="true">→</span>
@@ -282,7 +282,7 @@
                     Join our growing community of businesses and customers. Start your experience today.
                 </p>
                 <div class="mt-10 flex items-center justify-center gap-x-6">
-                    <a href="/onboard" 
+                    <a href="{{ route('business.onboard.step', 1) }}" 
                        x-track='{"action": "add_business", "source": "bottom_cta", "position": "primary"}'
                        class="rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors duration-200">
                         Add Your Business
