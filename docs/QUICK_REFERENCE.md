@@ -114,6 +114,37 @@
 ./vendor/bin/sail artisan setup:business-onboarding
 ```
 
+## 🎨 Design & Typography
+
+### Typography Guidelines
+Our design balances **funky aesthetics** with **readable content**:
+
+```html
+<!-- Funky titles - keep retro styling -->
+<h1 class="retro-business-text">🏪 Awesome Business Directory 🏪</h1>
+
+<!-- Readable business content -->
+<h3 class="business-name">{{ $business->business_name }}</h3>
+<p class="business-description">{{ $business->description }}</p>
+<div class="business-contact">📧 {{ $business->email }}</div>
+
+<!-- Clean form labels -->
+<label class="search-label">Search Businesses</label>
+
+<!-- Readable buttons -->
+<button class="button-text">VIEW DETAILS</button>
+```
+
+### Typography Stack
+- **Primary**: `Inter` (clean, modern sans-serif)
+- **Fallbacks**: `-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, `sans-serif`
+- **Philosophy**: Funky titles + readable content = best user experience
+
+### Key Design Files
+- `resources/views/businesses/index.blade.php` - Business listings
+- `resources/views/welcome.blade.php` - Homepage
+- Both use consistent typography classes for optimal readability
+
 ## 🔐 Admin Access
 
 ### Default Admin Login

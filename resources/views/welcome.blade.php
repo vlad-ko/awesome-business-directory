@@ -1,300 +1,303 @@
-@extends('layouts.app')
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{{ config('app.name', 'Laravel') }} - TOTALLY RADICAL Business Directory!</title>
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800&display=swap" rel="stylesheet" />
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <style>
+            body {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #f5576c);
+                background-size: 400% 400%;
+                animation: gradientShift 12s ease-in-out infinite;
+                overflow-x: hidden;
+            }
+            
+            @keyframes gradientShift {
+                0% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+                100% { background-position: 0% 50%; }
+            }
+            
+            .retro-text {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                font-weight: 800;
+                text-shadow: 2px 2px 0px #ff1493, 4px 4px 0px rgba(0,0,0,0.3);
+                color: #ffffff;
+                letter-spacing: -0.025em;
+            }
+            
+            .neon-button {
+                background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+                border: 2px solid #ffffff;
+                color: #ffffff;
+                font-weight: bold;
+                text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            }
+            
+            .neon-button:hover {
+                background: linear-gradient(45deg, #4ecdc4, #ff6b6b);
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            }
+            
+            /* Readable content text */
+            .content-text {
+                font-weight: 500;
+                line-height: 1.6;
+                letter-spacing: -0.025em;
+            }
+            
+            .button-text {
+                font-weight: 600;
+                letter-spacing: -0.025em;
+            }
+            
+            .rainbow-text {
+                background: linear-gradient(45deg, #ff0000, #ff8000, #ffff00, #80ff00, #00ff00, #00ff80, #00ffff, #0080ff, #0000ff, #8000ff, #ff0080, #ff0000);
+                background-size: 200% 200%;
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                animation: rainbow 3s ease-in-out infinite;
+            }
+            
+            @keyframes rainbow {
+                0% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+                100% { background-position: 0% 50%; }
+            }
+            
+            .retro-box {
+                background: linear-gradient(45deg, #667eea, #764ba2);
+                border: 3px solid rgba(255,255,255,0.3);
+                border-radius: 15px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                backdrop-filter: blur(10px);
+            }
+            
+            .marquee {
+                overflow: hidden;
+                white-space: nowrap;
+                background: #000;
+                color: #00ff00;
+                padding: 10px;
+                font-family: monospace;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            
+            .marquee span {
+                display: inline-block;
+                animation: marquee 15s linear infinite;
+            }
+            
+            @keyframes marquee {
+                0% { transform: translateX(100%); }
+                100% { transform: translateX(-100%); }
+            }
+            
+            .retro-nav {
+                background: linear-gradient(90deg, #ff1493, #00ffff, #ffff00);
+                border-bottom: 5px solid #ffffff;
+                padding: 15px 0;
+            }
+            
+            .cyber-grid {
+                background-image: 
+                    linear-gradient(rgba(0,255,255,0.3) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0,255,255,0.3) 1px, transparent 1px);
+                background-size: 20px 20px;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: -1;
+                animation: gridMove 10s linear infinite;
+            }
+            
+            @keyframes gridMove {
+                0% { transform: translate(0, 0); }
+                100% { transform: translate(20px, 20px); }
+            }
+            
+            .glow {
+                filter: drop-shadow(0 0 10px #00ffff) drop-shadow(0 0 20px #ff1493);
+            }
+            
+            .star {
+                position: absolute;
+                color: #ffff00;
+                animation: twinkle 2s infinite;
+            }
+            
+            @keyframes twinkle {
+                0%, 100% { opacity: 0.3; transform: scale(1); }
+                50% { opacity: 1; transform: scale(1.2); }
+            }
+        </style>
+    </head>
+<body>
+    <!-- Cyber Grid Background -->
+    <div class="cyber-grid"></div>
+    
+    <!-- Animated Stars -->
+    <div class="star" style="top: 10%; left: 20%;">⭐</div>
+    <div class="star" style="top: 20%; left: 80%; animation-delay: 0.5s;">✨</div>
+    <div class="star" style="top: 60%; left: 10%; animation-delay: 1s;">🌟</div>
+    <div class="star" style="top: 80%; left: 70%; animation-delay: 1.5s;">⭐</div>
+    <div class="star" style="top: 40%; left: 90%; animation-delay: 2s;">✨</div>
 
-@section('content')
-<div x-data="welcomePage" class="bg-white">
-    <!-- Hero Section -->
-    <div class="relative isolate px-6 pt-14 lg:px-8">
-        <div class="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
-            <div class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)"></div>
-        </div>
-        
-        <div class="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
-            <div class="hidden sm:mb-8 sm:flex sm:justify-center">
-                <div class="relative rounded-full px-3 py-1 text-sm leading-6 text-gray-600 ring-1 ring-gray-900/10 hover:ring-gray-900/20">
-                    Discover amazing local businesses. 
-                    <a href="#features" class="font-semibold text-indigo-600">
-                        <span class="absolute inset-0" aria-hidden="true"></span>
-                        Learn more <span aria-hidden="true">&rarr;</span>
+    <!-- Marquee Text -->
+    <div class="marquee">
+        <span>🎉 WELCOME TO THE MOST AWESOME BUSINESS DIRECTORY ON THE INFORMATION SUPERHIGHWAY! 🎉 💫 TOTALLY RADICAL BUSINESSES AWAIT YOU! 💫 🚀 SURF THE WEB LIKE IT'S 1999! 🚀</span>
+    </div>
+
+    <!-- Header -->
+    <header class="retro-nav relative z-10">
+        <nav class="container mx-auto px-6">
+            <div class="flex items-center justify-between">
+                <div class="retro-text text-3xl font-bold glow">
+                    🏪 AWESOME BIZZZ DIRECTORY 🏪
+                </div>
+                <div class="space-x-4">
+                    <a href="{{ route('businesses.index') }}" class="button-text neon-button px-6 py-3 rounded-full transition-all duration-300">
+                        🔍 BROWSE SHOPS
                     </a>
+                    <a href="{{ route('business.onboard.step', 1) }}" class="button-text neon-button px-6 py-3 rounded-full transition-all duration-300">
+                        🚀 JOIN NOW!
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8 relative z-10">
+        <!-- Hero Section -->
+        <div class="text-center mb-12">
+            <h1 class="text-5xl lg:text-6xl font-bold retro-text mb-6 leading-tight">
+                ✨ Discover Your ✨
+                <br>
+                <span class="rainbow-text text-6xl lg:text-7xl">Neighborhood</span>
+                <br>
+                💎 Gems! 💎
+            </h1>
+            
+            <div class="retro-box p-8 mb-8 mx-auto max-w-4xl">
+                <p class="content-text text-xl text-white mb-4">
+                    🌈 Find the most excellent local shops! 🌈
+                </p>
+                <p class="content-text text-lg text-yellow-200">
+                    Restaurants • Stores • Services • And more cool stuff! 
+                </p>
+                <div class="mt-4">
+                    <span class="text-2xl">🎊</span>
+                    <span class="content-text text-white text-lg">Totally free to use!</span>
+                    <span class="text-2xl">🎊</span>
                 </div>
             </div>
             
-            <div class="text-center">
-                <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
-                    Awesome Business Directory
-                </h1>
-                <p class="mt-6 text-lg leading-8 text-gray-600">
-                    Connect with local businesses, discover new services, and grow your community. 
-                    Whether you're a business owner or a customer, we've got you covered.
-                </p>
-                
-                <div class="mt-10 flex items-center justify-center gap-x-6">
-                    <a href="/businesses" 
-                       x-track='{"action": "browse_businesses", "source": "hero_cta", "position": "primary"}'
-                       class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors duration-200">
-                        Browse Businesses
-                    </a>
-                    <a href="{{ route('business.onboard.step', 1) }}" 
-                       x-track='{"action": "add_business", "source": "hero_cta", "position": "secondary"}'
-                       class="text-sm font-semibold leading-6 text-gray-900 hover:text-indigo-600 transition-colors duration-200">
-                        Add Your Business <span aria-hidden="true">→</span>
-                    </a>
-                </div>
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12">
+                <a href="{{ route('businesses.index') }}" 
+                   class="button-text neon-button px-8 py-4 rounded-full text-lg transition-all duration-300">
+                    🔥 Explore Now! 🔥
+                </a>
+                <a href="{{ route('business.onboard.step', 1) }}" 
+                   class="neon-button px-8 py-4 rounded-full font-bold text-lg transition-all duration-300">
+                    💫 List Your Business! 💫
+                </a>
             </div>
         </div>
-        
-        <div class="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]" aria-hidden="true">
-            <div class="relative left-[calc(50%+3rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%+36rem)] sm:w-[72.1875rem]" style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)"></div>
-        </div>
-    </div>
 
-    <!-- Features Section -->
-    <div id="features" class="py-24 sm:py-32">
-        <div class="mx-auto max-w-7xl px-6 lg:px-8">
-            <div class="mx-auto max-w-2xl lg:text-center">
-                <h2 class="text-base font-semibold leading-7 text-indigo-600">Everything you need</h2>
-                <p class="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-                    Comprehensive business directory platform
-                </p>
-                <p class="mt-6 text-lg leading-8 text-gray-600">
-                    Built with modern technologies and comprehensive monitoring to ensure the best experience for both businesses and customers.
-                </p>
+        <!-- Features Section -->
+        <div class="grid md:grid-cols-3 gap-8 mb-12">
+            <div class="retro-box p-6 text-center transform hover:scale-105 transition-all duration-300">
+                <div class="text-6xl mb-4 glow">🍕</div>
+                <h3 class="text-2xl font-bold text-white mb-2">RESTAURANTS</h3>
+                <p class="text-yellow-300 font-bold">Find the most tubular eats in town!</p>
             </div>
             
-            <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-4xl">
-                <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-2 lg:gap-y-16">
-                    <div class="relative pl-16">
-                        <dt class="text-base font-semibold leading-7 text-gray-900">
-                            <div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600">
-                                <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                                </svg>
-                            </div>
-                            Fast & Reliable
-                        </dt>
-                        <dd class="mt-2 text-base leading-7 text-gray-600">
-                            Built with Laravel and optimized for performance. Real-time monitoring ensures everything runs smoothly.
-                        </dd>
-                    </div>
-                    
-                    <div class="relative pl-16">
-                        <dt class="text-base font-semibold leading-7 text-gray-900">
-                            <div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600">
-                                <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.623 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                                </svg>
-                            </div>
-                            Secure & Monitored
-                        </dt>
-                        <dd class="mt-2 text-base leading-7 text-gray-600">
-                            Enterprise-grade security with comprehensive error tracking and performance monitoring via Sentry.
-                        </dd>
-                    </div>
-                    
-                    <div class="relative pl-16">
-                        <dt class="text-base font-semibold leading-7 text-gray-900">
-                            <div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600">
-                                <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                                </svg>
-                            </div>
-                            User-Friendly
-                        </dt>
-                        <dd class="mt-2 text-base leading-7 text-gray-600">
-                            Intuitive interface powered by Alpine.js for smooth interactions and seamless user experience.
-                        </dd>
-                    </div>
-                    
-                    <div class="relative pl-16">
-                        <dt class="text-base font-semibold leading-7 text-gray-900">
-                            <div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600">
-                                <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-                                </svg>
-                            </div>
-                            Analytics & Insights
-                        </dt>
-                        <dd class="mt-2 text-base leading-7 text-gray-600">
-                            Comprehensive analytics and business insights to help you understand user behavior and optimize performance.
-                        </dd>
-                    </div>
-                </dl>
-            </div>
-        </div>
-    </div>
-
-    <!-- Demo Section -->
-    <div class="bg-gray-50 py-24 sm:py-32">
-        <div class="mx-auto max-w-7xl px-6 lg:px-8">
-            <div class="mx-auto max-w-2xl lg:text-center">
-                <h2 class="text-base font-semibold leading-7 text-indigo-600">Interactive Demo</h2>
-                <p class="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-                    See it in action
-                </p>
-                <p class="mt-6 text-lg leading-8 text-gray-600">
-                    Experience our platform's features with this interactive demo. All interactions are tracked and monitored.
-                </p>
+            <div class="retro-box p-6 text-center transform hover:scale-105 transition-all duration-300">
+                <div class="text-6xl mb-4 glow">🛍️</div>
+                <h3 class="text-2xl font-bold text-white mb-2">SHOPPING</h3>
+                <p class="text-yellow-300 font-bold">Discover radical retail therapy!</p>
             </div>
             
-            <!-- Interactive Demo Component -->
-            <div x-data="{ 
-                demoStep: 1, 
-                businessName: '', 
-                searchTerm: '',
-                showSuccess: false,
-                
-                nextStep() {
-                    this.demoStep++;
-                    if (this.demoStep > 3) {
-                        this.showSuccess = true;
-                        setTimeout(() => {
-                            this.resetDemo();
-                        }, 3000);
-                    }
-                },
-                
-                resetDemo() {
-                    this.demoStep = 1;
-                    this.businessName = '';
-                    this.searchTerm = '';
-                    this.showSuccess = false;
-                }
-            }" class="mt-16">
-                
-                <div class="mx-auto max-w-2xl">
-                    <!-- Demo Progress -->
-                    <div class="mb-8">
-                        <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
-                            <span>Demo Progress</span>
-                            <span x-text="`${demoStep}/3`"></span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-indigo-600 h-2 rounded-full transition-all duration-500" 
-                                 :style="`width: ${(demoStep / 3) * 100}%`"></div>
-                        </div>
-                    </div>
-                    
-                    <!-- Demo Steps -->
-                    <div class="bg-white rounded-lg shadow-lg p-6">
-                        <!-- Step 1: Business Search -->
-                        <div x-show="demoStep === 1" x-transition>
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                                Step 1: Search for Businesses
-                            </h3>
-                            <div class="space-y-4">
-                                <input type="text" 
-                                       x-model="searchTerm"
-                                       x-track='{"action": "demo_search", "step": 1}'
-                                       placeholder="Try searching for 'restaurant' or 'coffee'"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <button @click="nextStep()" 
-                                        x-track='{"action": "demo_next_step", "from_step": 1}'
-                                        :disabled="!searchTerm"
-                                        :class="searchTerm ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-300 cursor-not-allowed'"
-                                        class="w-full px-4 py-2 text-white rounded-md transition-colors">
-                                    Continue to Step 2
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Step 2: Add Business -->
-                        <div x-show="demoStep === 2" x-transition>
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                                Step 2: Add Your Business
-                            </h3>
-                            <div class="space-y-4">
-                                <input type="text" 
-                                       x-model="businessName"
-                                       x-track='{"action": "demo_business_name", "step": 2}'
-                                       placeholder="Enter your business name"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <select x-track='{"action": "demo_industry_select", "step": 2}'
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                    <option value="">Select Industry</option>
-                                    <option value="restaurant">Restaurant</option>
-                                    <option value="retail">Retail</option>
-                                    <option value="services">Services</option>
-                                    <option value="technology">Technology</option>
-                                </select>
-                                <button @click="nextStep()" 
-                                        x-track='{"action": "demo_next_step", "from_step": 2}'
-                                        :disabled="!businessName"
-                                        :class="businessName ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-300 cursor-not-allowed'"
-                                        class="w-full px-4 py-2 text-white rounded-md transition-colors">
-                                    Continue to Step 3
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Step 3: Contact Information -->
-                        <div x-show="demoStep === 3" x-transition>
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                                Step 3: Contact Information
-                            </h3>
-                            <div class="space-y-4">
-                                <input type="email" 
-                                       x-track='{"action": "demo_email_input", "step": 3}'
-                                       placeholder="business@example.com"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <input type="tel" 
-                                       x-track='{"action": "demo_phone_input", "step": 3}'
-                                       placeholder="(555) 123-4567"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <button @click="nextStep()" 
-                                        x-track='{"action": "demo_complete", "business_name": businessName}'
-                                        class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors">
-                                    Complete Demo
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Success Message -->
-                        <div x-show="showSuccess" x-transition>
-                            <div class="text-center">
-                                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                </div>
-                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Demo Completed!</h3>
-                                <p class="text-gray-600 mb-4">
-                                    Great job! All your interactions have been tracked and analyzed.
-                                </p>
-                                <p class="text-sm text-gray-500">
-                                    Resetting demo in 3 seconds...
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="retro-box p-6 text-center transform hover:scale-105 transition-all duration-300">
+                <div class="text-6xl mb-4 glow">🔧</div>
+                <h3 class="text-2xl font-bold text-white mb-2">SERVICES</h3>
+                <p class="text-yellow-300 font-bold">Get totally awesome help!</p>
             </div>
         </div>
-    </div>
 
-    <!-- CTA Section -->
-    <div class="bg-indigo-600">
-        <div class="px-6 py-24 sm:px-6 sm:py-32 lg:px-8">
-            <div class="mx-auto max-w-2xl text-center">
-                <h2 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                    Ready to get started?
-                </h2>
-                <p class="mx-auto mt-6 max-w-xl text-lg leading-8 text-indigo-200">
-                    Join our growing community of businesses and customers. Start your experience today.
-                </p>
-                <div class="mt-10 flex items-center justify-center gap-x-6">
-                    <a href="{{ route('business.onboard.step', 1) }}" 
-                       x-track='{"action": "add_business", "source": "bottom_cta", "position": "primary"}'
-                       class="rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors duration-200">
-                        Add Your Business
-                    </a>
-                    <a href="/businesses" 
-                       x-track='{"action": "browse_businesses", "source": "bottom_cta", "position": "secondary"}'
-                       class="text-sm font-semibold leading-6 text-white hover:text-indigo-200 transition-colors duration-200">
-                        Browse Directory <span aria-hidden="true">→</span>
-                    </a>
+        <!-- Stats Section -->
+        <div class="retro-box p-8 mb-12 text-center">
+            <h2 class="text-4xl font-bold retro-text mb-6">📊 TOTALLY AWESOME STATS! 📊</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div>
+                    <div class="text-5xl font-bold rainbow-text">{{ \App\Models\Business::count() }}+</div>
+                    <div class="text-xl text-white font-bold">RADICAL BUSINESSES</div>
+                </div>
+                <div>
+                    <div class="text-5xl font-bold rainbow-text">∞</div>
+                    <div class="text-xl text-white font-bold">HAPPY CUSTOMERS</div>
+                </div>
+                <div>
+                    <div class="text-5xl font-bold rainbow-text">24/7</div>
+                    <div class="text-xl text-white font-bold">TOTALLY ONLINE</div>
                 </div>
             </div>
         </div>
+
+        <!-- Call to Action -->
+        <div class="text-center retro-box p-8">
+            <h2 class="text-4xl font-bold retro-text mb-4">
+                🎯 READY TO GET STARTED? 🎯
+            </h2>
+            <p class="text-xl text-white font-bold mb-6">
+                Join the most excellent business directory on the World Wide Web!
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="{{ route('businesses.index') }}" 
+                   class="neon-button px-8 py-4 rounded-full font-bold text-xl transition-all duration-300">
+                    🌟 START BROWSING 🌟
+                </a>
+                <a href="{{ route('business.onboard.step', 1) }}" 
+                   class="neon-button px-8 py-4 rounded-full font-bold text-xl transition-all duration-300">
+                    🚀 BECOME A MEMBER 🚀
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="retro-nav mt-12 py-8">
+        <div class="container mx-auto px-6 text-center">
+            <div class="retro-text text-2xl mb-4">
+                🌈 AWESOME BUSINESS DIRECTORY 🌈
+            </div>
+            <p class="text-white font-bold">
+                © {{ date('Y') }} - SURFING THE WEB SINCE THE 90s! 🏄‍♂️
+            </p>
+            <div class="mt-4">
+                <span class="text-yellow-300 font-bold">⚡ POWERED BY PURE AWESOMENESS ⚡</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Floating Elements -->
+    <div style="position: fixed; top: 10%; right: 5%; z-index: 100;">
+        <div class="text-4xl glow">🎪</div>
     </div>
-</div>
-@endsection 
+    <div style="position: fixed; bottom: 10%; left: 5%; z-index: 100;">
+        <div class="text-4xl glow">🎨</div>
+    </div>
+</body>
+</html> 

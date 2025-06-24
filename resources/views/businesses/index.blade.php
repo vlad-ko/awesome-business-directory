@@ -1,151 +1,388 @@
 @extends('layouts.app')
 
-@section('content')
-<div x-data="businessDirectory" class="container mx-auto px-6 py-8">
-    <div class="max-w-7xl mx-auto">
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-4">Business Directory</h1>
-            <p class="text-lg text-gray-600">Discover amazing local businesses in your area</p>
-        </div>
+@push('head')
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800&display=swap" rel="stylesheet" />
+@endpush
 
-        <!-- Search and Filter -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search Businesses</label>
-                    <input type="text" 
-                           id="search"
-                           x-model="searchTerm"
-                           @input="search()"
-                           placeholder="Search by name or description..."
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                
-                <div>
-                    <label for="industry" class="block text-sm font-medium text-gray-700 mb-2">Filter by Industry</label>
-                    <select id="industry"
-                            x-model="selectedIndustry"
-                            @change="filterBusinesses()"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">All Industries</option>
-                        <option value="restaurant">Restaurant</option>
-                        <option value="retail">Retail</option>
-                        <option value="services">Services</option>
-                        <option value="technology">Technology</option>
-                        <option value="healthcare">Healthcare</option>
-                        <option value="education">Education</option>
-                    </select>
+@section('content')
+<style>
+    .retro-business-page {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #f5576c);
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease-in-out infinite;
+        min-height: 100vh;
+    }
+    
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    .retro-business-text {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 800;
+        text-shadow: 2px 2px 0px #ff1493, 4px 4px 0px rgba(0,0,0,0.3);
+        color: #ffffff;
+        letter-spacing: -0.025em;
+    }
+    
+    .retro-business-box {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: 3px solid rgba(255,255,255,0.3);
+        border-radius: 15px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        backdrop-filter: blur(10px);
+    }
+    
+    .featured-business-card {
+        background: linear-gradient(135deg, #ff6b6b, #4ecdc4, #45b7d1);
+        border: 3px solid rgba(255,255,255,0.4);
+        border-radius: 15px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    
+    .featured-business-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+        animation: shine 6s ease-in-out infinite;
+    }
+    
+    @keyframes shine {
+        0% { transform: rotate(0deg) translate(-100%, -100%); }
+        100% { transform: rotate(360deg) translate(-100%, -100%); }
+    }
+    
+    .regular-business-card {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 15px;
+        box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+        backdrop-filter: blur(5px);
+    }
+    
+    .neon-search-box {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: 3px solid rgba(255,255,255,0.3);
+        border-radius: 15px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        backdrop-filter: blur(10px);
+    }
+    
+    .retro-input {
+        background: rgba(255,255,255,0.9);
+        border: 2px solid rgba(255,255,255,0.5);
+        color: #4a5568;
+        font-weight: 500;
+        border-radius: 25px;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    .retro-input:focus {
+        outline: none;
+        border-color: #4ecdc4;
+        box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.3);
+        background: rgba(255,255,255,1);
+    }
+    
+    .rainbow-text {
+        background: linear-gradient(45deg, #ff0000, #ff8000, #ffff00, #80ff00, #00ff00, #00ff80, #00ffff, #0080ff, #0000ff, #8000ff, #ff0080, #ff0000);
+        background-size: 200% 200%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: rainbow 3s ease-in-out infinite;
+        font-weight: 700;
+    }
+    
+    @keyframes rainbow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    .glow {
+        filter: drop-shadow(0 0 10px #00ffff) drop-shadow(0 0 20px #ff1493);
+    }
+    
+    .star {
+        position: absolute;
+        color: #ffff00;
+        animation: twinkle 2s infinite;
+    }
+    
+    @keyframes twinkle {
+        0%, 100% { opacity: 0.3; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    /* Improved text readability */
+    .business-name {
+        font-weight: 600;
+        font-size: 1.25rem;
+        line-height: 1.4;
+        letter-spacing: -0.025em;
+    }
+    
+    .business-description {
+        font-weight: 400;
+        line-height: 1.6;
+        font-size: 0.95rem;
+    }
+    
+    .business-contact {
+        font-weight: 500;
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+    
+    .search-label {
+        font-weight: 600;
+        font-size: 1rem;
+        letter-spacing: -0.025em;
+    }
+    
+    .button-text {
+        font-weight: 600;
+        letter-spacing: -0.025em;
+    }
+</style>
+
+<div class="retro-business-page relative">
+    <!-- Animated Stars -->
+    <div class="star" style="top: 5%; left: 15%;">⭐</div>
+    <div class="star" style="top: 15%; left: 85%; animation-delay: 0.5s;">✨</div>
+    <div class="star" style="top: 70%; left: 5%; animation-delay: 1s;">🌟</div>
+    <div class="star" style="top: 25%; left: 95%; animation-delay: 1.5s;">⭐</div>
+    <div class="star" style="top: 85%; left: 75%; animation-delay: 2s;">✨</div>
+
+    <div x-data="businessDirectory" class="container mx-auto px-6 py-8 relative z-10">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-12">
+                            <h1 class="text-4xl lg:text-5xl font-bold retro-business-text mb-6 leading-tight">
+                🏪 Awesome Business Directory 🏪
+            </h1>
+            <div class="retro-business-box p-6 mx-auto max-w-4xl">
+                <p class="text-xl text-white font-semibold leading-relaxed">
+                    <span class="rainbow-text">Discover amazing local businesses!</span>
+                </p>
+                <p class="text-lg text-yellow-200 font-medium mt-2">
+                    🌟 Your neighborhood's most excellent shops await! 🌟
+                </p>
+            </div>
+            </div>
+
+            <!-- Featured Businesses Section -->
+            @if(isset($featuredBusinesses) && $featuredBusinesses->isNotEmpty())
+            <div class="mb-12">
+                <h2 class="text-3xl lg:text-4xl font-bold retro-business-text text-center mb-8">
+                    ⭐ Featured Businesses ⭐
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    @foreach($featuredBusinesses as $business)
+                        <div class="featured-business-card rounded-xl p-6 transform hover:scale-105 transition-all duration-300 relative z-10">
+                            <div class="relative z-20">
+                                <div class="flex items-start justify-between mb-4">
+                                    <h3 class="business-name text-white">{{ $business->business_name }}</h3>
+                                    <div class="flex flex-col gap-1">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-300 text-purple-800 glow">
+                                            ⭐ FEATURED
+                                        </span>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white text-purple-800">
+                                            {{ strtoupper($business->industry) }}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <p class="business-description text-white mb-4">{{ $business->description }}</p>
+                                
+                                <div class="space-y-2 mb-4">
+                                    @if($business->primary_email)
+                                        <div class="business-contact flex items-center text-yellow-300">
+                                            📧 {{ $business->primary_email }}
+                                        </div>
+                                    @endif
+                                    
+                                    @if($business->phone_number)
+                                        <div class="business-contact flex items-center text-yellow-300">
+                                            📞 {{ $business->phone_number }}
+                                        </div>
+                                    @endif
+                                </div>
+                                
+                                <div class="flex justify-between items-center">
+                                    <a href="{{ route('business.show', $business) }}" 
+                                       @click="viewBusiness({{ $business->id }}, '{{ $business->business_name }}')"
+                                       class="button-text bg-white hover:bg-yellow-300 text-purple-800 px-4 py-2 rounded-full text-sm transition-all duration-200 transform hover:scale-110 glow">
+                                        🔥 VIEW DETAILS 🔥
+                                    </a>
+                                    
+                                    @if($business->website_url)
+                                        <a href="{{ $business->website_url }}" 
+                                           target="_blank"
+                                           class="text-yellow-300 hover:text-white transition-colors duration-200 text-2xl">
+                                            🌐
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
-        </div>
+            @endif
 
-        <!-- Loading State -->
-        <div x-show="isLoading" class="text-center py-12">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-            <p class="mt-2 text-gray-600">Loading businesses...</p>
-        </div>
-
-        <!-- Results Count -->
-        <div x-show="!isLoading" class="mb-6">
-            <p class="text-gray-600">
-                Showing <span x-text="filteredBusinesses.length" class="font-semibold"></span> 
-                of <span x-text="businesses.length" class="font-semibold"></span> businesses
-            </p>
-        </div>
-
-        <!-- Business Grid -->
-        <div x-show="!isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Sample Business Cards (in real app, these would be dynamic) -->
-            @forelse($businesses ?? [] as $business)
-                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
-                    <div class="p-6">
-                        <div class="flex items-start justify-between mb-4">
-                                                         <h3 class="text-xl font-semibold text-gray-900">{{ $business->business_name }}</h3>
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                {{ ucfirst($business->industry) }}
-                            </span>
-                        </div>
-                        
-                        <p class="text-gray-600 mb-4 line-clamp-3">{{ $business->description }}</p>
-                        
-                        <div class="space-y-2 mb-4">
-                            @if($business->primary_email)
-                                <div class="flex items-center text-sm text-gray-600">
-                                    <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                    {{ $business->primary_email }}
-                                </div>
-                            @endif
-                            
-                            @if($business->phone_number)
-                                <div class="flex items-center text-sm text-gray-600">
-                                    <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                    </svg>
-                                    {{ $business->phone_number }}
-                                </div>
-                            @endif
-                        </div>
-                        
-                        <div class="flex justify-between items-center">
-                                                         <a href="{{ route('business.show', $business) }}" 
-                                @click="viewBusiness({{ $business->id }}, '{{ $business->business_name }}')"
-                               class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
-                                View Details
-                                <svg class="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                            
-                            @if($business->website_url)
-                                <a href="{{ $business->website_url }}" 
-                                   target="_blank"
-                                   class="text-gray-400 hover:text-gray-600 transition-colors duration-200">
-                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                    </svg>
-                                </a>
-                            @endif
-                        </div>
+            <!-- Search and Filter -->
+            <div class="neon-search-box rounded-xl p-8 mb-12">
+                <h3 class="text-xl font-semibold text-white text-center mb-6">
+                    🔍 Find your perfect business! 🔍
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="search" class="search-label block text-white mb-2">Search Businesses</label>
+                        <input type="text" 
+                               id="search"
+                               x-model="searchTerm"
+                               @input="search()"
+                               placeholder="Search by name or description..."
+                               class="retro-input w-full px-4 py-3 rounded-full">
+                    </div>
+                    
+                    <div>
+                        <label for="industry" class="search-label block text-white mb-2">Filter by Industry</label>
+                        <select id="industry"
+                                x-model="selectedIndustry"
+                                @change="filterBusinesses()"
+                                class="retro-input w-full px-4 py-3 rounded-full">
+                            <option value="">ALL INDUSTRIES</option>
+                            <option value="restaurant">RESTAURANT</option>
+                            <option value="retail">RETAIL</option>
+                            <option value="services">SERVICES</option>
+                            <option value="technology">TECHNOLOGY</option>
+                            <option value="healthcare">HEALTHCARE</option>
+                            <option value="education">EDUCATION</option>
+                        </select>
                     </div>
                 </div>
-            @empty
-                <!-- Empty State -->
-                <div class="col-span-full text-center py-12">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900">No businesses found</h3>
-                    <p class="mt-1 text-sm text-gray-500">
-                        Be the first to add your business to our directory.
+            </div>
+
+            <!-- Loading State -->
+            <div x-show="isLoading" class="text-center py-12">
+                <div class="text-6xl glow mb-4">🔄</div>
+                <p class="text-2xl font-bold text-white">LOADING AWESOME BUSINESSES...</p>
+            </div>
+
+            <!-- Results Count -->
+            <div x-show="!isLoading" class="mb-8 text-center">
+                <div class="retro-business-box p-4 inline-block">
+                    <p class="text-xl font-bold text-white">
+                        SHOWING <span x-text="filteredBusinesses.length" class="text-yellow-300 text-2xl"></span> 
+                        OF <span x-text="businesses.length" class="text-yellow-300 text-2xl"></span> TOTALLY RAD BUSINESSES! 🎉
                     </p>
-                    <div class="mt-6">
-                        <a href="{{ route('business.onboard.step', 1) }}" 
-                           class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            Add Your Business
-                        </a>
-                    </div>
                 </div>
-            @endforelse
-        </div>
+            </div>
 
-        <!-- No Results for Search -->
-        <div x-show="!isLoading && filteredBusinesses.length === 0 && (searchTerm || selectedIndustry)" 
-             class="text-center py-12">
-            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <h3 class="mt-2 text-sm font-medium text-gray-900">No results found</h3>
-            <p class="mt-1 text-sm text-gray-500">
-                Try adjusting your search terms or filters.
-            </p>
-            <div class="mt-6">
-                <button @click="searchTerm = ''; selectedIndustry = ''; filterBusinesses();"
-                        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-indigo-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 border-indigo-600">
-                    Clear Filters
-                </button>
+            <!-- Business Grid -->
+            <div x-show="!isLoading">
+                <h2 class="text-3xl font-bold retro-business-text text-center mb-8">
+                    🏬 ALL BUSINESSES 🏬
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    @forelse($businesses ?? [] as $business)
+                        <div class="regular-business-card rounded-xl p-6 hover:scale-105 transition-all duration-300">
+                            <div class="flex items-start justify-between mb-4">
+                                <h3 class="business-name text-white">{{ $business->business_name }}</h3>
+                                <div class="flex flex-col gap-1">
+                                    @if($business->is_featured)
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-300 text-purple-800 glow">
+                                            ⭐ FEATURED
+                                        </span>
+                                    @endif
+                                    @if($business->is_verified)
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-300 text-purple-800">
+                                            ✅ VERIFIED
+                                        </span>
+                                    @endif
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white text-purple-800">
+                                        {{ strtoupper($business->industry) }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <p class="business-description text-yellow-300 mb-4">{{ $business->description }}</p>
+                            
+                            <div class="space-y-2 mb-4">
+                                @if($business->primary_email)
+                                    <div class="business-contact flex items-center text-white">
+                                        📧 {{ $business->primary_email }}
+                                    </div>
+                                @endif
+                                
+                                @if($business->phone_number)
+                                    <div class="business-contact flex items-center text-white">
+                                        📞 {{ $business->phone_number }}
+                                    </div>
+                                @endif
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <a href="{{ route('business.show', $business) }}" 
+                                   @click="viewBusiness({{ $business->id }}, '{{ $business->business_name }}')"
+                                   class="button-text bg-yellow-300 hover:bg-white text-purple-800 px-4 py-2 rounded-full text-sm transition-all duration-200 transform hover:scale-110">
+                                    💎 VIEW DETAILS 💎
+                                </a>
+                                
+                                @if($business->website_url)
+                                    <a href="{{ $business->website_url }}" 
+                                       target="_blank"
+                                       class="text-yellow-300 hover:text-white transition-colors duration-200 text-2xl">
+                                        🌐
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <!-- Empty State -->
+                        <div class="col-span-full text-center py-12">
+                            <div class="retro-business-box p-12 mx-auto max-w-2xl">
+                                <div class="text-8xl mb-6 glow">🏪</div>
+                                <h3 class="text-3xl font-bold text-white mb-4">NO BUSINESSES FOUND!</h3>
+                                <p class="text-xl text-yellow-300 font-bold mb-6">
+                                    Be the first totally awesome business to join our radical directory!
+                                </p>
+                                <a href="{{ route('business.onboard.step', 1) }}" 
+                                   class="bg-yellow-300 hover:bg-white text-purple-800 px-8 py-4 rounded-full font-bold text-lg transition-all duration-200 transform hover:scale-110 glow">
+                                    🚀 ADD YOUR BUSINESS 🚀
+                                </a>
+                            </div>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- No Results for Search -->
+            <div x-show="!isLoading && filteredBusinesses.length === 0 && (searchTerm || selectedIndustry)" 
+                 class="text-center py-12">
+                <div class="retro-business-box p-12 mx-auto max-w-2xl">
+                    <div class="text-8xl mb-6 glow">🔍</div>
+                    <h3 class="text-3xl font-bold text-white mb-4">NO RESULTS FOUND!</h3>
+                    <p class="text-xl text-yellow-300 font-bold mb-6">
+                        Try different search terms or check out all our radical businesses!
+                    </p>
+                    <button @click="searchTerm = ''; selectedIndustry = ''; filterBusinesses();"
+                            class="bg-yellow-300 hover:bg-white text-purple-800 px-8 py-4 rounded-full font-bold text-lg transition-all duration-200 transform hover:scale-110 glow">
+                        🎯 CLEAR FILTERS 🎯
+                    </button>
+                </div>
             </div>
         </div>
     </div>

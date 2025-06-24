@@ -19,8 +19,8 @@ class BusinessListingTest extends TestCase
 
         $response->assertStatus(200)
             ->assertViewIs('businesses.index')
-            ->assertSee('Business Directory')
-            ->assertSee('Businesses');
+            ->assertSee('Awesome Business Directory')
+            ->assertSee('Discover amazing local businesses!');
     }
 
     #[Test]
@@ -88,8 +88,8 @@ class BusinessListingTest extends TestCase
         $response->assertStatus(200)
             ->assertSee('Approved Business 1')
             ->assertSee('Approved Business 2')
-            ->assertSee('Technology')
-            ->assertSee('Healthcare')
+            ->assertSee('TECHNOLOGY')  // Text is now uppercase in our 90's design
+            ->assertSee('HEALTHCARE')
             ->assertDontSee('Pending Business');
     }
 
@@ -99,9 +99,9 @@ class BusinessListingTest extends TestCase
         $response = $this->get(route('businesses.index'));
 
         $response->assertStatus(200)
-            ->assertSee('No businesses found')
-            ->assertSee('Be the first to add your business to our directory.')
-            ->assertSee('Add Your Business');
+            ->assertSee('NO BUSINESSES FOUND!')
+            ->assertSee('Be the first totally awesome business to join our radical directory!')
+            ->assertSee('ADD YOUR BUSINESS');
     }
 
     #[Test]
@@ -132,7 +132,7 @@ class BusinessListingTest extends TestCase
 
         $response->assertStatus(200)
             ->assertSee('Tech Solutions Inc')
-            ->assertSee('Technology')
+            ->assertSee('TECHNOLOGY')  // Text is now uppercase in our 90's design
             ->assertSee('We provide innovative technology solutions')
             ->assertSee('info@techsolutions.com')
             ->assertSee('555-TECH-SOL');

@@ -18,7 +18,7 @@ class BusinessOnboardingMultiStepTest extends TestCase
             'business_name' => $this->faker->company,
             'industry' => $this->faker->word,
             'business_type' => 'LLC',
-            'description' => $this->faker->paragraph,
+            'description' => substr($this->faker->paragraph, 0, 200), // Limit to 200 chars to be safe
             'tagline' => $this->faker->sentence,
         ];
     }

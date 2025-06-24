@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Business;
 use App\Services\BusinessLogger;
 use Illuminate\Support\Facades\Validator;
+use Sentry\SentrySdk;
+use function Sentry\addBreadcrumb;
 
 class BusinessOnboardingController extends Controller
 {
@@ -268,6 +270,22 @@ class BusinessOnboardingController extends Controller
         }
 
         $startTime = microtime(true);
+        
+        // Log distributed tracing context for debugging
+        $sentryTrace = $request->header('sentry-trace') ?: $request->input('_sentry_sentry_trace');
+        $baggage = $request->header('baggage') ?: $request->input('_sentry_baggage');
+        
+        addBreadcrumb(
+            'distributed_tracing',
+            'Final business submission with distributed tracing',
+            [
+                'has_sentry_trace' => !empty($sentryTrace),
+                'has_baggage' => !empty($baggage),
+                'trace_preview' => $sentryTrace ? substr($sentryTrace, 0, 20) . '...' : null,
+                'request_method' => $request->method(),
+                'user_agent' => $request->userAgent()
+            ]
+        );
 
         // Gather all data from session
         $allData = [];
@@ -275,19 +293,84 @@ class BusinessOnboardingController extends Controller
             $allData = array_merge($allData, session("onboarding_step_{$i}", []));
         }
 
-        // Start transaction for final submission
+        // Start transaction for final submission with distributed tracing context
         $transaction = BusinessLogger::startBusinessTransaction('onboarding_final_submit', [
             'total_fields' => count($allData),
+            'has_frontend_trace' => !empty($sentryTrace),
+            'distributed_tracing' => [
+                'trace_header' => $sentryTrace,
+                'baggage_header' => $baggage,
+                'correlation_id' => session()->getId()
+            ]
+        ]);
+
+        // Add comprehensive context to transaction
+        $transaction?->setData([
+            'business_data' => [
+                'business_name' => $allData['business_name'] ?? null,
+                'industry' => $allData['industry'] ?? null,
+                'business_type' => $allData['business_type'] ?? null,
+                'city' => $allData['city'] ?? null,
+                'state_province' => $allData['state_province'] ?? null
+            ],
+            'submission_context' => [
+                'session_id' => session()->getId(),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'referrer' => $request->header('referer'),
+                'total_steps_completed' => count(self::STEPS)
+            ]
         ]);
 
         try {
-            // Create database span
-            $dbSpan = BusinessLogger::createDatabaseSpan('business_create', 'Creating business from multi-step form');
+            // Create span for data preparation
+            $dataPreparationSpan = BusinessLogger::createBusinessSpan('data_preparation', [
+                'operation' => 'prepare_business_data',
+                'fields_count' => count($allData)
+            ]);
+            
+            // Simulate data preparation work
+            $dataPreparationSpan?->setData([
+                'required_fields' => ['business_name', 'industry', 'primary_email'],
+                'optional_fields' => array_diff(array_keys($allData), ['business_name', 'industry', 'primary_email']),
+                'data_size_bytes' => strlen(json_encode($allData))
+            ]);
+            $dataPreparationSpan?->finish();
 
-            // Create the business
+            // Create database span with comprehensive tracing
+            $dbSpan = BusinessLogger::createDatabaseSpan('business_create', 'Creating business from multi-step form');
+            
+            // Add pre-insert context
+            $dbSpan?->setData([
+                'operation' => 'INSERT',
+                'table' => 'businesses',
+                'fields_count' => count($allData),
+                'business_name' => $allData['business_name'] ?? null,
+                'industry' => $allData['industry'] ?? null,
+                'pre_insert_timestamp' => now()->toISOString()
+            ]);
+
+            // Create the business - this is the actual database operation
+            addBreadcrumb(
+                'database.operation',
+                'Creating business record in database',
+                [
+                    'operation' => 'Business::create',
+                    'table' => 'businesses',
+                    'business_name' => $allData['business_name'] ?? null
+                ]
+            );
+            
             $business = Business::create($allData);
 
-            $dbSpan?->setData(['business_id' => $business->id]);
+            // Add post-insert context
+            $dbSpan?->setData([
+                'business_id' => $business->id,
+                'business_slug' => $business->business_slug,
+                'created_at' => $business->created_at->toISOString(),
+                'post_insert_timestamp' => now()->toISOString(),
+                'insert_success' => true
+            ]);
             $dbSpan?->finish();
 
             // Calculate processing time

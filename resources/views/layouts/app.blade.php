@@ -5,27 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+            <!-- Sentry Distributed Tracing Meta Tag -->
+        @if(config('sentry.dsn'))
+            <meta name="sentry-trace" content="{{ \Sentry\SentrySdk::getCurrentHub()->getTransaction()?->toTraceparent() ?? '' }}">
+        @endif
+
     <title>{{ config('app.name', 'Awesome Business Directory') }}</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
     <!-- Sentry Configuration -->
     <script>
         window.sentryConfig = {
             dsn: '{{ config('sentry.dsn') }}',
-            environment: '{{ app()->environment() }}',
-            tracesSampleRate: 1.0,
-            release: '{{ config('app.version', '1.0.0') }}'
+            environment: '{{ config('sentry.environment', app()->environment()) }}',
+            release: '{{ config('sentry.release') }}',
+            tracesSampleRate: {{ config('sentry.traces_sample_rate', 1.0) }},
+            // Enable distributed tracing
+            enableTracing: true,
+            // Add user context for distributed tracing
+            @auth
+            user: {
+                id: '{{ auth()->user()->id }}',
+                email: '{{ auth()->user()->email }}',
+                is_admin: {{ auth()->user()->is_admin ? 'true' : 'false' }}
+            },
+            @else
+            user: null,
+            @endauth
+            // Add page context
+            pageContext: {
+                route: '{{ request()->route()?->getName() }}',
+                url: '{{ request()->fullUrl() }}',
+                method: '{{ request()->method() }}',
+                timestamp: '{{ now()->toISOString() }}'
+            }
         };
         
-        // User context for Sentry
-        @auth
-        window.userContext = {
-            id: '{{ auth()->id() }}',
-            email: '{{ auth()->user()->email }}',
-            is_admin: {{ auth()->user()->is_admin ? 'true' : 'false' }}
-        };
-        @else
-        window.userContext = null;
-        @endauth
+        // Initialize distributed tracing early
+        window.sentryTraceId = null;
+        window.sentrySpanId = null;
+        
+        // Extract trace context from meta tag if present
+        document.addEventListener('DOMContentLoaded', function() {
+            const sentryTraceMeta = document.querySelector('meta[name="sentry-trace"]');
+            if (sentryTraceMeta) {
+                const traceValue = sentryTraceMeta.getAttribute('content');
+                if (traceValue) {
+                    const [traceId, spanId] = traceValue.split('-');
+                    window.sentryTraceId = traceId;
+                    window.sentrySpanId = spanId;
+                    console.log('Distributed tracing initialized:', { traceId, spanId });
+                }
+            }
+        });
     </script>
 
     <!-- Scripts -->
@@ -62,5 +97,7 @@
             }
         });
     </script>
+
+    <!-- Sentry and Alpine.js are initialized via app.js -->
 </body>
 </html> 

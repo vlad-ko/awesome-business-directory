@@ -38,7 +38,13 @@ class BusinessController extends Controller
         // Get all businesses for statistics (before filtering)
         $allBusinesses = Business::all();
 
-        // Get approved businesses for display
+        // Get featured businesses for the featured section
+        $featuredBusinesses = Business::approved()
+            ->where('is_featured', true)
+            ->orderBy('business_name')
+            ->get();
+
+        // Get approved businesses for display (excluding featured ones from main list to avoid duplication)
         $businesses = Business::approved()
             ->orderedForListing()
             ->get();
@@ -87,7 +93,7 @@ class BusinessController extends Controller
         ]);
 
         $transaction?->finish();
-        return view('businesses.index', compact('businesses'));
+        return view('businesses.index', compact('businesses', 'featuredBusinesses'));
     }
 
     /**

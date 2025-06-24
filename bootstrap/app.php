@@ -16,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
         ]);
         
+        // Add Sentry distributed tracing middleware
+        $middleware->web(append: [
+            \App\Http\Middleware\SentryTracingMiddleware::class,
+        ]);
+        
         // Configure auth middleware to redirect to admin login for admin routes
         $middleware->redirectGuestsTo(function ($request) {
             if ($request->is('admin/*')) {

@@ -38,7 +38,10 @@
                 </div>
             @endif
 
-            <form action="{{ route('business.onboard.step.store', $step) }}" method="POST" class="space-y-8">
+            <form action="{{ route('business.onboard.step.store', $step) }}" method="POST" 
+                  class="space-y-8" 
+                  data-form="onboarding_step_{{ $step }}"
+                  id="onboarding-step-{{ $step }}-form">
                 @csrf
 
                 <!-- Basic Information Section -->
