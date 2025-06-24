@@ -90,7 +90,7 @@
                    x-track='{"action": "browse_businesses", "source": "nav", "position": "primary"}'>
                     Browse Businesses
                 </a>
-                <a href="{{ route('business.onboard') }}" 
+                <a href="{{ route('business.onboard.step', 1) }}" 
                    class="bg-gradient-to-tr from-green-500 to-emerald-400 text-white px-6 py-3 rounded-full font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-500"
                    x-track='{"action": "add_business", "source": "nav", "position": "secondary"}'>
                     Join Directory
@@ -122,7 +122,7 @@
                    x-track='{"action": "browse_businesses", "source": "hero_cta", "position": "primary"}'>
                     🔍 Explore Businesses
                 </a>
-                <a href="{{ route('business.onboard') }}" 
+                <a href="{{ route('business.onboard.step', 1) }}" 
                    class="bg-gradient-to-tr from-green-600 to-blue-600 text-white px-8 py-4 rounded-lg font-bold text-lg shadow-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-500"
                    x-track='{"action": "add_business", "source": "hero_cta", "position": "secondary"}'>
                     🚀 List Your Business

@@ -10,7 +10,7 @@ Sentry.init({
     integrations: [
         new BrowserTracing({
             // Capture interactions automatically
-            tracePropagationTargets: [window.location.hostname, /^\//],
+            tracePropagationTargets: [window.location.hostname, /^\\//],
         }),
     ],
     
@@ -20,51 +20,27 @@ Sentry.init({
     // Session tracking
     autoSessionTracking: true,
     
-    // Enhanced release tracking
+    // Release tracking
     release: window.sentryConfig?.release || '1.0.0',
     
-    // Advanced configuration options
-    beforeSend(event, hint) {
-        // Add business directory context
-        event.tags = {
-            ...event.tags,
-            feature: 'business_directory',
-            page_type: getPageType(),
-        };
-        
-        // Add user context if available
-        if (window.userContext) {
-            event.user = {
-                id: window.userContext.id,
-                email: window.userContext.email,
-                is_admin: window.userContext.is_admin
-            };
+    // User context
+    initialScope: {
+        user: window.sentryConfig?.user || null,
+        tags: {
+            component: 'frontend'
         }
-        
-        // Enhanced error processing
-        try {
-            if (hint.originalException instanceof Error) {
-                // Process error for better debugging
-                Sentry.captureException(hint.originalException, {
-                    tags: { source: 'frontend_error_boundary' }
-                });
-            }
-        } catch (error) {
-            console.warn('Sentry beforeSend processing failed:', error);
-        }
-        
-        return event;
     },
-
-    beforeBreadcrumb(breadcrumb, hint) {
-        // Filter and enhance breadcrumbs
-        if (breadcrumb.category === 'ui.click') {
-            breadcrumb.data = {
-                ...breadcrumb.data,
-                business_feature: getBusinessFeatureFromElement(hint.event?.target)
-            };
+    
+    // Enhanced error handling
+    beforeSend(event, hint) {
+        // Filter out non-essential errors
+        if (event.exception) {
+            const error = hint.originalException;
+            if (error && error.name === 'AbortError') {
+                return null; // Don't send cancelled requests
+            }
         }
-        return breadcrumb;
+        return event;
     }
 });
 
@@ -95,294 +71,452 @@ function getBusinessFeatureFromElement(element) {
 
 // Enhanced Distributed Tracing Utilities
 export const SentryTracing = {
-    // Track form submission with comprehensive tracing
-    trackFormSubmission(formElement, formName, submitData = {}) {
-        return Sentry.startSpan({
+    /**
+     * Track form submission with distributed tracing
+     */
+    trackFormSubmission(formElement, formName) {
+        const transaction = Sentry.startTransaction({
             name: `Form Submission: ${formName}`,
-            op: 'form.submit',
-            attributes: {
-                form_name: formName,
-                form_action: formElement.action,
-                form_method: formElement.method,
-                ...submitData
-            }
-        }, (span) => {
-            // Get form data
-            const formData = new FormData(formElement);
-            
-            // Add trace headers for distributed tracing
-            const traceHeaders = {
-                'sentry-trace': span.toTraceparent() || '',
-            };
-            
-            // Return data for the calling code
-            return { 
-                transaction: span, 
-                requestSpan: span, 
-                traceHeaders 
-            };
+            op: 'form.submit'
         });
+
+        // Add trace headers for distributed tracing
+        const traceHeaders = {
+            'sentry-trace': transaction.toTraceparent(),
+            'baggage': transaction.toBaggage()
+        };
+
+        return { transaction, traceHeaders };
     },
     
-    // Track AJAX requests with enhanced monitoring
-    trackAjaxRequest(url, method, requestData = {}) {
-        return Sentry.startSpan({
-            name: `AJAX ${method.toUpperCase()}: ${url}`,
-            op: 'http.request',
-            attributes: {
-                url: url,
-                method: method.toUpperCase(),
-                ...requestData
-            }
-        }, (span) => {
-            // Get trace headers for distributed tracing
-            const traceHeaders = {
-                'sentry-trace': span.toTraceparent() || '',
+    /**
+     * Get trace headers for requests
+     */
+    getTraceHeaders() {
+        const span = Sentry.getCurrentHub().getScope()?.getSpan();
+        if (span) {
+            return {
+                'sentry-trace': span.toTraceparent(),
+                'baggage': span.toBaggage()
             };
-            
-            return { 
-                transaction: span, 
-                networkSpan: span, 
-                traceHeaders 
-            };
-        });
-    },
-    
-    // Track business operations
-    trackBusinessOperation(operation, businessData = {}) {
-        return Sentry.startSpan({
-            name: `Business Operation: ${operation}`,
-            op: 'business.operation',
-            attributes: {
-                operation: operation,
-                business_id: businessData.business_id,
-                business_name: businessData.business_name,
-                ...businessData
-            }
-        }, (span) => {
-            return span;
-        });
+        }
+        return {};
     }
 };
 
 // Enhanced Performance tracking utilities
 export const SentryPerformance = {
-    // Track page load performance with comprehensive metrics
+    /**
+     * Track page load performance
+     */
     trackPageLoad() {
-        if (typeof window !== 'undefined' && window.performance) {
-            const navigation = performance.getEntriesByType('navigation')[0];
-            if (navigation) {
-                Sentry.setMeasurement('page.load_time', navigation.loadEventEnd - navigation.loadEventStart, 'millisecond');
-                Sentry.setMeasurement('page.dom_content_loaded', navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart, 'millisecond');
-                
-                // Additional performance metrics
-                const paintEntries = performance.getEntriesByType('paint');
-                paintEntries.forEach(paint => {
-                    if (paint.name === 'first-paint') {
-                        Sentry.setMeasurement('paint.first_paint', paint.startTime, 'millisecond');
-                    }
-                });
-            }
+        if (typeof performance !== 'undefined') {
+            window.addEventListener('load', () => {
+                const entries = performance.getEntriesByType('navigation')[0];
+                if (entries) {
+                    Sentry.addBreadcrumb({
+                        category: 'performance',
+                        message: 'Page load metrics',
+                        data: {
+                            loadTime: entries.loadEventEnd - entries.fetchStart,
+                            domContentLoaded: entries.domContentLoadedEventEnd - entries.fetchStart,
+                            firstPaint: this.getFirstPaint(),
+                            firstContentfulPaint: this.getFirstContentfulPaint()
+                        },
+                        level: 'info'
+                    });
+                }
+            });
         }
     },
     
-    // Track form metrics with detailed analysis
+    /**
+     * Get first paint timing
+     */
+    getFirstPaint() {
+        const entries = performance.getEntriesByType('paint');
+        const firstPaint = entries.find(entry => entry.name === 'first-paint');
+        return firstPaint ? firstPaint.startTime : null;
+    },
+    
+    /**
+     * Get first contentful paint timing
+     */
+    getFirstContentfulPaint() {
+        const entries = performance.getEntriesByType('paint');
+        const firstContentfulPaint = entries.find(entry => entry.name === 'first-contentful-paint');
+        return firstContentfulPaint ? firstContentfulPaint.startTime : null;
+    },
+    
+    /**
+     * Track AJAX requests performance
+     */
+    trackAjaxRequests() {
+        if (window.axios) {
+            // Request interceptor
+            window.axios.interceptors.request.use(
+                config => {
+                    config.metadata = { startTime: new Date() };
+                    return config;
+                },
+                error => Promise.reject(error)
+            );
+
+            // Response interceptor
+            window.axios.interceptors.response.use(
+                response => {
+                    const duration = new Date() - response.config.metadata.startTime;
+                    
+                    // Track slow requests
+                    if (duration > 2000) {
+                        Sentry.addBreadcrumb({
+                            category: 'http.slow',
+                            message: `Slow request: ${response.config.url}`,
+                            data: {
+                                url: response.config.url,
+                                method: response.config.method,
+                                duration: duration,
+                                status: response.status
+                            },
+                            level: 'warning'
+                        });
+                    }
+                    
+                    return response;
+                },
+                error => {
+                    const duration = error.config ? new Date() - error.config.metadata.startTime : 0;
+                    
+                    Sentry.addBreadcrumb({
+                        category: 'http.error',
+                        message: `HTTP Error: ${error.config?.url}`,
+                        data: {
+                            url: error.config?.url,
+                            method: error.config?.method,
+                            duration: duration,
+                            status: error.response?.status
+                        },
+                        level: 'error'
+                    });
+                    
+                    return Promise.reject(error);
+                }
+            );
+        }
+    },
+    
+    /**
+     * Track form metrics comprehensively
+     */
     trackFormMetrics(formElement, formName) {
         if (!formElement) return;
-        
-        const startTime = performance.now();
-        
-        formElement.addEventListener('submit', () => {
-            const endTime = performance.now();
-            const fillTime = endTime - startTime;
-            
-            Sentry.setMeasurement(`form.${formName}.fill_time`, fillTime, 'millisecond');
-            
+
+        let startTime = null;
+        let fieldInteractions = 0;
+        let fieldErrors = 0;
+
+        // Track form start
+        const handleFormFocus = () => {
+            if (!startTime) {
+                startTime = new Date();
+                Sentry.addBreadcrumb({
+                    category: 'form.progression',
+                    message: `Form started: ${formName}`,
+                    data: { form_name: formName, timestamp: startTime.toISOString() },
+                    level: 'info'
+                });
+            }
+        };
+
+        // Track field interactions
+        const handleFieldInteraction = (event) => {
+            fieldInteractions++;
             Sentry.addBreadcrumb({
-                category: 'form',
-                message: `Form ${formName} submitted`,
+                category: 'form.interaction',
+                message: `Field interaction: ${event.target.name || event.target.id}`,
                 data: {
                     form_name: formName,
-                    fill_time: fillTime,
-                    field_count: formElement.elements.length
-                }
+                    field: event.target.name || event.target.id,
+                    field_type: event.target.type,
+                    interaction_count: fieldInteractions
+                },
+                level: 'info'
+            });
+        };
+
+        // Track form submission
+        const handleFormSubmit = () => {
+            const completionTime = startTime ? new Date() - startTime : 0;
+            
+            Sentry.addBreadcrumb({
+                category: 'form.progression',
+                message: `Form submitted: ${formName}`,
+                data: {
+                    form_name: formName,
+                    completion_time: completionTime,
+                    field_interactions: fieldInteractions,
+                    field_errors: fieldErrors
+                },
+                level: 'info'
+            });
+        };
+
+        // Track form abandonment
+        const handleBeforeUnload = () => {
+            if (startTime && fieldInteractions > 0) {
+                const abandonmentTime = new Date() - startTime;
+                Sentry.addBreadcrumb({
+                    category: 'form.abandonment',
+                    message: `Form abandoned: ${formName}`,
+                    data: {
+                        form_name: formName,
+                        time_before_abandonment: abandonmentTime,
+                        field_interactions: fieldInteractions
+                    },
+                    level: 'warning'
+                });
+            }
+        };
+
+        // Attach event listeners
+        formElement.addEventListener('focusin', handleFormFocus, { once: true });
+        formElement.addEventListener('input', handleFieldInteraction);
+        formElement.addEventListener('change', handleFieldInteraction);
+        formElement.addEventListener('submit', handleFormSubmit);
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        // Track form validation errors
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE && 
+                        (node.classList?.contains('error') || node.classList?.contains('invalid'))) {
+                        fieldErrors++;
+                    }
+                });
             });
         });
+
+        observer.observe(formElement, { childList: true, subtree: true });
     }
 };
 
 // Business-specific tracking with comprehensive analytics
 export const BusinessDirectoryTracking = {
-    // Track business card clicks with enhanced context
+    /**
+     * Track page views
+     */
+    trackPageView(pageName) {
+        Sentry.addBreadcrumb({
+            category: 'navigation',
+            message: `Page viewed: ${pageName}`,
+            data: {
+                page_name: pageName,
+                url: window.location.href,
+                referrer: document.referrer,
+                timestamp: new Date().toISOString()
+            },
+            level: 'info'
+        });
+    },
+    
+    /**
+     * Track business card interactions
+     */
     trackBusinessCardClick(businessId, businessName) {
         Sentry.addBreadcrumb({
             category: 'business.interaction',
-            message: `Viewed business: ${businessName}`,
+            message: `Business card clicked: ${businessName}`,
             data: {
                 business_id: businessId,
                 business_name: businessName,
-                page_type: getPageType(),
-                feature: 'business_discovery'
-            }
+                action: 'card_click',
+                timestamp: new Date().toISOString()
+            },
+            level: 'info'
         });
-        
+
+        // Set user context
         Sentry.setTag('last_viewed_business', businessId);
     },
     
-    // Track onboarding progress with detailed metrics
+    /**
+     * Track search interactions
+     */
+    trackSearchInteraction(searchTerm, resultsCount) {
+        Sentry.addBreadcrumb({
+            category: 'search.interaction',
+            message: `Search performed: ${searchTerm}`,
+            data: {
+                search_term: searchTerm,
+                results_count: resultsCount,
+                timestamp: new Date().toISOString()
+            },
+            level: 'info'
+        });
+    },
+    
+    /**
+     * Track user interactions
+     */
+    trackUserInteraction(action, data = {}) {
+        Sentry.addBreadcrumb({
+            category: 'user.interaction',
+            message: `User interaction: ${action}`,
+            data: {
+                action: action,
+                ...data,
+                timestamp: new Date().toISOString()
+            },
+            level: 'info'
+        });
+    },
+    
+    /**
+     * Track form progression in multi-step forms
+     */
+    trackFormProgression(eventType, step, data = {}) {
+        const progress_percentage = step ? (step / 4) * 100 : 0;
+        
+        Sentry.addBreadcrumb({
+            category: 'form.progression',
+            message: `Form progression: ${eventType}`,
+            data: {
+                event_type: eventType,
+                step: step,
+                progress_percentage: progress_percentage,
+                ...data,
+                timestamp: new Date().toISOString()
+            },
+            level: 'info'
+        });
+    },
+    
+    /**
+     * Track field interactions in forms
+     */
+    trackFieldInteraction(fieldName, value) {
+        Sentry.addBreadcrumb({
+            category: 'form.field_interaction',
+            message: `Field interaction: ${fieldName}`,
+            data: {
+                field_name: fieldName,
+                has_value: !!value,
+                value_length: value ? value.length : 0,
+                timestamp: new Date().toISOString()
+            },
+            level: 'info'
+        });
+    },
+    
+    /**
+     * Track onboarding progress
+     */
     trackOnboardingProgress(step, stepData) {
+        const progress_percentage = (step / 4) * 100;
+        
         Sentry.addBreadcrumb({
             category: 'onboarding.progress',
             message: `Onboarding step ${step} completed`,
             data: {
                 step: step,
-                data_keys: Object.keys(stepData),
-                page_type: getPageType(),
-                feature: 'business_onboarding'
-            }
+                progress_percentage: progress_percentage,
+                step_data: stepData,
+                timestamp: new Date().toISOString()
+            },
+            level: 'info'
         });
-        
-        Sentry.setTag('onboarding_step', step);
     },
     
-    // Track search interactions with comprehensive data
-    trackSearchInteraction(searchTerm, resultsCount) {
+    /**
+     * Track admin actions
+     */
+    trackAdminAction(action, businessId, data = {}) {
         Sentry.addBreadcrumb({
-            category: 'business.interaction',
-            message: `Business search performed`,
+            category: 'admin.action',
+            message: `Admin action: ${action}`,
             data: {
-                search_term: searchTerm,
-                results_count: resultsCount,
-                feature: 'business_search'
-            }
+                action: action,
+                business_id: businessId,
+                admin_user: window.userContext?.id,
+                ...data,
+                timestamp: new Date().toISOString()
+            },
+            level: 'info'
         });
     }
 };
 
 // Alpine.js Integration with comprehensive directives
-export function initializeAlpineIntegration() {
-    if (typeof window.Alpine !== 'undefined') {
-        // Sentry tracking directive
-        window.Alpine.directive('sentry-track', (el, { expression }, { evaluate }) => {
+export const AlpineIntegration = {
+    /**
+     * Initialize Alpine.js directives for Sentry
+     */
+    initializeDirectives() {
+        // Tracking directive
+        Alpine.directive('track', (el, { expression }, { evaluate }) => {
             const trackingData = evaluate(expression);
             
             el.addEventListener('click', () => {
-                Sentry.addBreadcrumb({
-                    category: 'ui.interaction',
-                    message: `Element clicked: ${trackingData.action}`,
-                    data: trackingData
-                });
+                if (trackingData.action) {
+                    BusinessDirectoryTracking.trackUserInteraction(trackingData.action, trackingData);
+                }
             });
         });
 
-        // Enhanced tracking directive
-        window.Alpine.directive('track', (el, { expression }, { evaluate }) => {
-            const trackingData = evaluate(expression);
-            
-            el.addEventListener('click', () => {
-                Sentry.addBreadcrumb({
-                    category: 'ui.interaction',
-                    message: `Tracked interaction: ${trackingData.action}`,
-                    data: {
-                        ...trackingData,
-                        timestamp: new Date().toISOString(),
-                        url: window.location.href
-                    }
-                });
-            });
+        // Form tracking directive
+        Alpine.directive('track-form', (el, { expression }, { evaluate }) => {
+            const formName = evaluate(expression);
+            SentryPerformance.trackFormMetrics(el, formName);
         });
 
-        // Track change events
-        window.Alpine.directive('track-change', (el, { expression }, { evaluate }) => {
-            const trackingData = evaluate(expression);
+        // Change tracking directive
+        Alpine.directive('track-change', (el, { expression }, { evaluate }) => {
+            const eventName = evaluate(expression);
             
             el.addEventListener('change', (event) => {
-                Sentry.addBreadcrumb({
-                    category: 'ui.input',
-                    message: `Input changed: ${trackingData.field}`,
-                    data: {
-                        ...trackingData,
-                        value: event.target.value,
-                        timestamp: new Date().toISOString()
-                    }
-                });
+                BusinessDirectoryTracking.trackFieldInteraction(eventName, event.target.value);
             });
         });
     }
-}
+};
 
-// Initialize comprehensive frontend monitoring
+// Initialize comprehensive frontend tracking
 export function initializeSentryFrontend() {
-    // Track page load performance
-    SentryPerformance.trackPageLoad();
-    
-    // Initialize Alpine integration
-    initializeAlpineIntegration();
-    
-    // Set up AJAX monitoring with axios interceptors
-    if (window.axios) {
-        // Request interceptor
-        window.axios.interceptors.request.use(
-            (config) => {
-                const startTime = performance.now();
-                config.metadata = { startTime };
-                
-                // Add distributed tracing headers
-                const currentTransaction = Sentry.getCurrentHub().getScope()?.getTransaction();
-                if (currentTransaction) {
-                    config.headers['sentry-trace'] = currentTransaction.toTraceparent();
-                }
-                
-                return config;
-            },
-            (error) => {
-                Sentry.captureException(error);
-                return Promise.reject(error);
-            }
-        );
-        
-        // Response interceptor with performance monitoring
-        window.axios.interceptors.response.use(
-            (response) => {
-                const endTime = performance.now();
-                const duration = endTime - response.config.metadata.startTime;
-                
-                // Track slow requests
-                if (duration > 2000) {
-                    Sentry.addBreadcrumb({
-                        category: 'http',
-                        message: `Slow AJAX request: ${response.config.url}`,
-                        data: {
-                            url: response.config.url,
-                            method: response.config.method,
-                            duration: duration,
-                            status: response.status
-                        }
-                    });
-                }
-                
-                return response;
-            },
-            (error) => {
-                Sentry.captureException(error);
-                return Promise.reject(error);
-            }
-        );
+    // Set user context if available
+    if (window.userContext) {
+        Sentry.setUser(window.userContext);
     }
-    
-    // Global error handler
+
+    // Initialize performance tracking
+    SentryPerformance.trackPageLoad();
+    SentryPerformance.trackAjaxRequests();
+
+    // Initialize Alpine.js integration
+    if (window.Alpine) {
+        AlpineIntegration.initializeDirectives();
+    }
+
+    // Track initial page load
+    BusinessDirectoryTracking.trackPageView(
+        document.title || window.location.pathname
+    );
+
+    // Global error handling
     window.addEventListener('error', (event) => {
         Sentry.captureException(event.error, {
             tags: { source: 'global_error_handler' }
         });
     });
-    
-    // Promise rejection handler
+
+    // Unhandled promise rejection tracking
     window.addEventListener('unhandledrejection', (event) => {
         Sentry.captureException(event.reason, {
             tags: { source: 'unhandled_promise_rejection' }
         });
     });
+
+    console.log('Sentry frontend tracking initialized');
 }
 
 // Auto-initialize if window.sentryConfig is available

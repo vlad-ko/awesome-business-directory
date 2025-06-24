@@ -7,231 +7,202 @@ import Alpine from 'alpinejs';
 window.Alpine = Alpine;
 
 // Initialize Sentry frontend tracking
-initializeSentryFrontend();
+document.addEventListener('DOMContentLoaded', () => {
+    initializeSentryFrontend();
+});
 
-// Simplified Business Directory Component (search moved to server-side)
-Alpine.data('businessDirectory', () => ({
+// Welcome Page Component
+Alpine.data('welcomePage', () => ({
+    demoStep: 1,
+    
     init() {
-        console.log('Business Directory component initialized');
+        BusinessDirectoryTracking.trackPageView('welcome');
+    }
+}));
+
+// Business Directory Component
+Alpine.data('businessDirectory', () => ({
+    searchTerm: '',
+    selectedIndustry: '',
+    filteredBusinesses: [],
+    businesses: [],
+    isLoading: false,
+    
+    init() {
+        this.loadBusinesses();
+        this.$watch('searchTerm', () => this.filterBusinesses());
+        this.$watch('selectedIndustry', () => this.filterBusinesses());
+        
+        // Track component initialization
+        BusinessDirectoryTracking.trackSearchInteraction('component_initialized', this.searchTerm);
+    },
+    
+    async loadBusinesses() {
+        this.isLoading = true;
+        try {
+            const response = await fetch('/api/businesses');
+            this.businesses = await response.json();
+            this.filteredBusinesses = [...this.businesses];
+        } catch (error) {
+            console.error('Failed to load businesses:', error);
+        } finally {
+            this.isLoading = false;
+        }
+    },
+    
+    filterBusinesses() {
+        this.filteredBusinesses = this.businesses.filter(business => {
+            const matchesSearch = !this.searchTerm || 
+                business.business_name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+                business.description.toLowerCase().includes(this.searchTerm.toLowerCase());
+            
+            const matchesIndustry = !this.selectedIndustry || 
+                business.industry === this.selectedIndustry;
+            
+            return matchesSearch && matchesIndustry;
+        });
+        
+        // Track search interaction
+        BusinessDirectoryTracking.trackSearchInteraction(this.searchTerm, this.filteredBusinesses.length);
     },
     
     viewBusiness(businessId, businessName) {
-        // Track business card interactions
-        if (typeof BusinessDirectoryTracking !== 'undefined') {
-            BusinessDirectoryTracking.trackBusinessCardClick(businessId, businessName);
-        }
+        BusinessDirectoryTracking.trackBusinessCardClick(businessId, businessName);
+        window.location.href = `/businesses/${businessId}`;
     }
 }));
 
-// Multi-Step Onboarding Form Component
-Alpine.data('onboardingForm', () => ({
+// Business Onboarding Form Component
+Alpine.data('businessOnboardingForm', () => ({
     currentStep: 1,
-    totalSteps: 4,
+    formData: {},
     isSubmitting: false,
-    errors: {},
-    
-    // Form data for each step
-    step1: {
-        business_name: '',
-        industry: '',
-        business_type: '',
-        description: '',
-        tagline: ''
-    },
-    
-    step2: {
-        primary_email: '',
-        phone_number: '',
-        website_url: ''
-    },
-    
-    step3: {
-        street_address: '',
-        city: '',
-        state_province: '',
-        postal_code: '',
-        country: 'United States'
-    },
-    
-    step4: {
-        owner_name: '',
-        owner_email: ''
-    },
+    validationErrors: {},
     
     init() {
-        console.log('Onboarding form component initialized');
-        
-        // Track form initialization
-        BusinessDirectoryTracking.trackOnboardingProgress(0, {});
-        
-        // Initialize form performance tracking
-        const formElement = this.$el.querySelector('form');
-        if (formElement) {
-            SentryPerformance.trackFormMetrics(formElement, 'business_onboarding');
-        }
+        BusinessDirectoryTracking.trackFormProgression('onboarding_started', this.currentStep);
     },
     
-    get progressPercentage() {
-        return (this.currentStep / this.totalSteps) * 100;
-    },
-    
-    get currentStepData() {
-        return this[`step${this.currentStep}`];
-    },
-    
-    nextStep() {
-        if (this.validateCurrentStep()) {
-            // Track step completion
-            BusinessDirectoryTracking.trackOnboardingProgress(
-                this.currentStep, 
-                this.currentStepData
-            );
-            
-            this.currentStep++;
-            this.scrollToTop();
-        }
-    },
-    
-    previousStep() {
-        if (this.currentStep > 1) {
-            this.currentStep--;
-            this.scrollToTop();
-        }
-    },
-    
-    validateCurrentStep() {
-        this.errors = {};
-        const stepData = this.currentStepData;
-        
-        // Basic validation - in real app this would be more comprehensive
-        for (const [key, value] of Object.entries(stepData)) {
-            if (!value && this.isRequired(key)) {
-                this.errors[key] = `${this.getFieldLabel(key)} is required`;
-            }
-        }
-        
-        return Object.keys(this.errors).length === 0;
-    },
-    
-    isRequired(field) {
-        const requiredFields = {
-            1: ['business_name', 'industry', 'business_type', 'description'],
-            2: ['primary_email', 'phone_number'],
-            3: ['street_address', 'city', 'state_province', 'postal_code'],
-            4: ['owner_name', 'owner_email']
-        };
-        
-        return requiredFields[this.currentStep]?.includes(field) || false;
-    },
-    
-    getFieldLabel(field) {
-        const labels = {
-            business_name: 'Business Name',
-            industry: 'Industry',
-            business_type: 'Business Type',
-            description: 'Description',
-            primary_email: 'Email',
-            phone_number: 'Phone Number',
-            street_address: 'Street Address',
-            city: 'City',
-            state_province: 'State/Province',
-            postal_code: 'Postal Code',
-            owner_name: 'Owner Name',
-            owner_email: 'Owner Email'
-        };
-        
-        return labels[field] || field;
-    },
-    
-    async submitForm() {
-        if (!this.validateCurrentStep()) return;
-        
+    async submitStep(stepData) {
         this.isSubmitting = true;
+        this.validationErrors = {};
         
         try {
-            const formData = {
-                ...this.step1,
-                ...this.step2,
-                ...this.step3,
-                ...this.step4
-            };
+            const response = await fetch(`/onboard/step/${this.currentStep}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify(stepData)
+            });
             
-            // Track form submission attempt
-            BusinessDirectoryTracking.trackOnboardingProgress(5, formData);
-            
-            // Submit to server
-            const response = await window.axios.post('/onboard/submit', formData);
-            
-            if (response.status === 200) {
-                // Redirect to success page
-                window.location.href = '/onboard/success';
+            if (response.ok) {
+                this.formData = { ...this.formData, ...stepData };
+                this.currentStep++;
+                BusinessDirectoryTracking.trackFormProgression('step_completed', this.currentStep - 1);
+            } else {
+                const errors = await response.json();
+                this.validationErrors = errors.errors || {};
             }
         } catch (error) {
-            console.error('Form submission failed:', error);
-            
-            if (error.response?.data?.errors) {
-                this.errors = error.response.data.errors;
-            } else {
-                this.errors = { general: 'An error occurred. Please try again.' };
-            }
+            console.error('Step submission failed:', error);
         } finally {
             this.isSubmitting = false;
         }
-    },
-    
-    scrollToTop() {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-}));
-
-// Welcome Page Interaction Tracking
-Alpine.data('welcomePage', () => ({
-    init() {
-        console.log('Welcome page component initialized');
-    },
-    
-    trackCTA(action) {
-        // This will be tracked by the x-track directive
-        console.log(`CTA clicked: ${action}`);
     }
 }));
 
 // Admin Dashboard Component
 Alpine.data('adminDashboard', () => ({
-    pendingBusinesses: [],
-    stats: {
-        pending: 0,
-        approved: 0,
-        total: 0
-    },
-    isLoading: true,
+    businesses: [],
+    stats: {},
+    selectedBusiness: null,
+    isLoading: false,
     
-    async init() {
-        console.log('Admin dashboard component initialized');
-        await this.loadDashboardData();
+    init() {
+        this.loadDashboardData();
+        BusinessDirectoryTracking.trackPageView('admin_dashboard');
     },
     
     async loadDashboardData() {
+        this.isLoading = true;
         try {
-            // In a real app, this would fetch from the server
-            // For now, we'll simulate the data
-            this.isLoading = false;
+            const [businessesResponse, statsResponse] = await Promise.all([
+                fetch('/api/admin/businesses'),
+                fetch('/api/admin/stats')
+            ]);
+            
+            this.businesses = await businessesResponse.json();
+            this.stats = await statsResponse.json();
         } catch (error) {
             console.error('Failed to load dashboard data:', error);
+        } finally {
             this.isLoading = false;
         }
     },
     
     async approveBusiness(businessId) {
         try {
-            await window.axios.patch(`/admin/businesses/${businessId}/approve`);
-            // Reload dashboard data
+            await fetch(`/api/admin/businesses/${businessId}/approve`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            });
+            
             await this.loadDashboardData();
+            BusinessDirectoryTracking.trackAdminAction('business_approved', businessId);
         } catch (error) {
             console.error('Failed to approve business:', error);
         }
+    },
+    
+    async rejectBusiness(businessId, reason) {
+        try {
+            await fetch(`/api/admin/businesses/${businessId}/reject`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ reason })
+            });
+            
+            await this.loadDashboardData();
+            BusinessDirectoryTracking.trackAdminAction('business_rejected', businessId);
+        } catch (error) {
+            console.error('Failed to reject business:', error);
+        }
     }
 }));
+
+// Alpine.js tracking directive
+Alpine.directive('track', (el, { expression }, { evaluate }) => {
+    const trackingData = evaluate(expression);
+    
+    el.addEventListener('click', () => {
+        if (trackingData.action) {
+            BusinessDirectoryTracking.trackUserInteraction(trackingData.action, trackingData);
+        }
+    });
+});
+
+// Alpine.js form tracking directive
+Alpine.directive('track-form', (el, { expression }, { evaluate }) => {
+    const formName = evaluate(expression);
+    
+    SentryPerformance.trackFormMetrics(el, formName);
+});
+
+// Alpine.js change tracking directive
+Alpine.directive('track-change', (el, { expression }, { evaluate }) => {
+    const eventName = evaluate(expression);
+    
+    el.addEventListener('change', (event) => {
+        BusinessDirectoryTracking.trackFieldInteraction(eventName, event.target.value);
+    });
+});
 
 // Global error handler for Alpine.js
 window.addEventListener('alpine:init', () => {
