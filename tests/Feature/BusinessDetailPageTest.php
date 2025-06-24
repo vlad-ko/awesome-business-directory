@@ -71,7 +71,8 @@ class BusinessDetailPageTest extends TestCase
         $response = $this->get("/business/{$business->business_slug}");
         
         // Assert: Business hours section is displayed
-        $response->assertSee('Business Hours');
+        $response->assertSee('When We');
+        $response->assertSee('re Rockin');
         
         // Parse the business hours and check they're displayed correctly
         $hours = json_decode($business->business_hours, true);
@@ -103,7 +104,7 @@ class BusinessDetailPageTest extends TestCase
         $response = $this->get("/business/{$business->business_slug}");
         
         // Assert: Services section is displayed
-        $response->assertSee('Services Offered');
+        $response->assertSee('What We Rock At!');
         
         // Check that individual services are displayed
         $services = json_decode($business->services_offered, true);
@@ -126,7 +127,7 @@ class BusinessDetailPageTest extends TestCase
         $response = $this->get("/business/{$business->business_slug}");
         
         // Assert: Contact information is displayed
-        $response->assertSee('Contact Information');
+        $response->assertSee('Get In Touch!');
         $response->assertSee($business->primary_email);
         
         if ($business->phone_number) {
@@ -152,7 +153,7 @@ class BusinessDetailPageTest extends TestCase
         $response = $this->get("/business/{$business->business_slug}");
         
         // Assert: Location information is displayed
-        $response->assertSee('Location');
+        $response->assertSee('Find Us Here!');
         $response->assertSee($business->street_address);
         $response->assertSee($business->city);
         $response->assertSee($business->state_province);
@@ -175,7 +176,7 @@ class BusinessDetailPageTest extends TestCase
         $response = $this->get("/business/{$business->business_slug}");
         
         // Assert: Verified badge is displayed
-        $response->assertSee('Verified');
+        $response->assertSee('VERIFIED');
     }
 
     #[Test]
@@ -193,7 +194,7 @@ class BusinessDetailPageTest extends TestCase
         $response = $this->get("/business/{$business->business_slug}");
         
         // Assert: Featured badge is displayed
-        $response->assertSee('Featured');
+        $response->assertSee('FEATURED');
     }
 
     #[Test]
