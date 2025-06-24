@@ -14,6 +14,7 @@ class BusinessController extends Controller
     public function index(Request $request)
     {
         $startTime = microtime(true);
+        $searchTerm = $request->get('search');
 
         // Track if user came from welcome page CTA
         $referrer = $request->header('referer');
@@ -30,6 +31,7 @@ class BusinessController extends Controller
         $transaction = BusinessLogger::startBusinessTransaction('listing', [
             'page' => 'index',
             'from_welcome_cta' => $fromWelcomeCta,
+            'search_term' => $searchTerm,
         ]);
 
         // Create span for database queries
@@ -38,20 +40,31 @@ class BusinessController extends Controller
         // Get all businesses for statistics (before filtering)
         $allBusinesses = Business::all();
 
-        // Get featured businesses for the featured section
-        $featuredBusinesses = Business::approved()
-            ->where('is_featured', true)
-            ->orderBy('business_name')
-            ->get();
+        // Get featured businesses for the featured section (also apply search if provided)
+        $featuredBusinessesQuery = Business::approved()->where('is_featured', true);
+        if ($searchTerm) {
+            $featuredBusinessesQuery->where(function($query) use ($searchTerm) {
+                $query->where('business_name', 'LIKE', '%' . $searchTerm . '%')
+                      ->orWhere('description', 'LIKE', '%' . $searchTerm . '%');
+            });
+        }
+        $featuredBusinesses = $featuredBusinessesQuery->orderBy('business_name')->get();
 
-        // Get approved businesses for display (excluding featured ones from main list to avoid duplication)
-        $businesses = Business::approved()
-            ->orderedForListing()
-            ->get();
+        // Get approved businesses for display
+        $businessesQuery = Business::approved();
+        if ($searchTerm) {
+            $businessesQuery->where(function($query) use ($searchTerm) {
+                $query->where('business_name', 'LIKE', '%' . $searchTerm . '%')
+                      ->orWhere('description', 'LIKE', '%' . $searchTerm . '%');
+            });
+        }
+        $businesses = $businessesQuery->orderedForListing()->get();
 
         $dbSpan?->setData([
             'total_businesses' => $allBusinesses->count(),
-            'approved_businesses' => $businesses->count()
+            'approved_businesses' => $businesses->count(),
+            'search_term' => $searchTerm,
+            'has_search' => !empty($searchTerm)
         ]);
         $dbSpan?->finish();
 
@@ -62,18 +75,22 @@ class BusinessController extends Controller
             'total_businesses' => $allBusinesses->count(),
             'displayed_businesses' => $businesses->count(),
             'response_time_ms' => round($responseTime, 2),
-            'is_empty' => $businesses->isEmpty()
+            'is_empty' => $businesses->isEmpty(),
+            'search_term' => $searchTerm,
+            'has_search' => !empty($searchTerm)
         ]);
 
         // Create span for business logic
         $logicSpan = BusinessLogger::createBusinessSpan('statistics_calculation', [
             'businesses_count' => $businesses->count(),
+            'search_term' => $searchTerm,
         ]);
 
         // Log the listing view with comprehensive statistics
         if ($businesses->isEmpty()) {
-            BusinessLogger::emptyStateShown('no_approved_businesses');
-            $transaction?->setData(['empty_state' => 'shown']);
+            $emptyReason = $searchTerm ? 'no_search_results' : 'no_approved_businesses';
+            BusinessLogger::emptyStateShown($emptyReason);
+            $transaction?->setData(['empty_state' => 'shown', 'empty_reason' => $emptyReason]);
         } else {
             BusinessLogger::listingViewed($allBusinesses, $responseTime);
         }
@@ -93,7 +110,7 @@ class BusinessController extends Controller
         ]);
 
         $transaction?->finish();
-        return view('businesses.index', compact('businesses', 'featuredBusinesses'));
+        return view('businesses.index', compact('businesses', 'featuredBusinesses', 'searchTerm'));
     }
 
     /**

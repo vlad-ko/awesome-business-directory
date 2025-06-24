@@ -9,62 +9,17 @@ window.Alpine = Alpine;
 // Initialize Sentry frontend tracking
 initializeSentryFrontend();
 
-// Business Directory Alpine.js Components
+// Simplified Business Directory Component (search moved to server-side)
 Alpine.data('businessDirectory', () => ({
-    searchTerm: '',
-    selectedIndustry: '',
-    businesses: [],
-    filteredBusinesses: [],
-    isLoading: false,
-    
     init() {
-        // Track component initialization
         console.log('Business Directory component initialized');
-        this.loadBusinesses();
-    },
-    
-    search() {
-        if (this.searchTerm.length >= 2) {
-            // Track search interaction
-            BusinessDirectoryTracking.trackSearchInteraction(
-                this.searchTerm, 
-                this.filteredBusinesses.length
-            );
-        }
-        
-        this.filterBusinesses();
-    },
-    
-    filterBusinesses() {
-        this.filteredBusinesses = this.businesses.filter(business => {
-            const matchesSearch = !this.searchTerm || 
-                business.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-                business.description.toLowerCase().includes(this.searchTerm.toLowerCase());
-            
-            const matchesIndustry = !this.selectedIndustry || 
-                business.industry === this.selectedIndustry;
-            
-            return matchesSearch && matchesIndustry;
-        });
-    },
-    
-    async loadBusinesses() {
-        this.isLoading = true;
-        try {
-            // Simulate API call - in real app this would fetch from server
-            await new Promise(resolve => setTimeout(resolve, 500));
-            // For demo purposes, we'll populate with sample data
-            this.businesses = [];
-            this.filteredBusinesses = this.businesses;
-        } catch (error) {
-            console.error('Failed to load businesses:', error);
-        } finally {
-            this.isLoading = false;
-        }
     },
     
     viewBusiness(businessId, businessName) {
-        BusinessDirectoryTracking.trackBusinessCardClick(businessId, businessName);
+        // Track business card interactions
+        if (typeof BusinessDirectoryTracking !== 'undefined') {
+            BusinessDirectoryTracking.trackBusinessCardClick(businessId, businessName);
+        }
     }
 }));
 

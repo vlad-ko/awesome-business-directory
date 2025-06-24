@@ -220,9 +220,9 @@
                                 </div>
                                 
                                 <div class="flex justify-between items-center">
-                                    <a href="{{ route('business.show', $business) }}" 
-                                       @click="viewBusiness({{ $business->id }}, '{{ $business->business_name }}')"
-                                       class="button-text bg-white hover:bg-yellow-300 text-purple-800 px-4 py-2 rounded-full text-sm transition-all duration-200 transform hover:scale-110 glow">
+                                                                    <a href="{{ route('business.show', $business) }}" 
+                                   @click="viewBusiness({{ $business->id }}, '{{ $business->business_name }}')"
+                                   class="button-text bg-white hover:bg-yellow-300 text-purple-800 px-4 py-2 rounded-full text-sm transition-all duration-200 transform hover:scale-110 glow">
                                         🔥 VIEW DETAILS 🔥
                                     </a>
                                     
@@ -241,58 +241,64 @@
             </div>
             @endif
 
-            <!-- Search and Filter -->
+            <!-- Search -->
             <div class="neon-search-box rounded-xl p-8 mb-12">
                 <h3 class="text-xl font-semibold text-white text-center mb-6">
                     🔍 Find your perfect business! 🔍
                 </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label for="search" class="search-label block text-white mb-2">Search Businesses</label>
-                        <input type="text" 
-                               id="search"
-                               x-model="searchTerm"
-                               @input="search()"
-                               placeholder="Search by name or description..."
-                               class="retro-input w-full px-4 py-3 rounded-full">
+                <form method="GET" action="{{ route('businesses.index') }}" class="max-w-2xl mx-auto">
+                    <div class="flex gap-4">
+                        <div class="flex-1">
+                            <label for="search" class="search-label block text-white mb-2">Search Businesses</label>
+                            <input type="text" 
+                                   id="search"
+                                   name="search"
+                                   value="{{ $searchTerm ?? '' }}"
+                                   placeholder="Search by name or description..."
+                                   class="retro-input w-full px-4 py-3 rounded-full">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" 
+                                    class="button-text bg-yellow-300 hover:bg-white text-purple-800 px-6 py-3 rounded-full transition-all duration-200 transform hover:scale-105 glow">
+                                🔍 SEARCH
+                            </button>
+                        </div>
                     </div>
-                    
-                    <div>
-                        <label for="industry" class="search-label block text-white mb-2">Filter by Industry</label>
-                        <select id="industry"
-                                x-model="selectedIndustry"
-                                @change="filterBusinesses()"
-                                class="retro-input w-full px-4 py-3 rounded-full">
-                            <option value="">ALL INDUSTRIES</option>
-                            <option value="restaurant">RESTAURANT</option>
-                            <option value="retail">RETAIL</option>
-                            <option value="services">SERVICES</option>
-                            <option value="technology">TECHNOLOGY</option>
-                            <option value="healthcare">HEALTHCARE</option>
-                            <option value="education">EDUCATION</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Loading State -->
-            <div x-show="isLoading" class="text-center py-12">
-                <div class="text-6xl glow mb-4">🔄</div>
-                <p class="text-2xl font-bold text-white">LOADING AWESOME BUSINESSES...</p>
+                    @if($searchTerm)
+                        <div class="mt-4 text-center">
+                            <a href="{{ route('businesses.index') }}" 
+                               class="button-text bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full text-sm transition-all duration-200">
+                                🎯 Clear Search
+                            </a>
+                        </div>
+                    @endif
+                </form>
             </div>
 
             <!-- Results Count -->
-            <div x-show="!isLoading" class="mb-8 text-center">
-                <div class="retro-business-box p-4 inline-block">
-                    <p class="text-xl font-bold text-white">
-                        SHOWING <span x-text="filteredBusinesses.length" class="text-yellow-300 text-2xl"></span> 
-                        OF <span x-text="businesses.length" class="text-yellow-300 text-2xl"></span> TOTALLY RAD BUSINESSES! 🎉
-                    </p>
+            @if($searchTerm)
+                <div class="mb-8 text-center">
+                    <div class="retro-business-box p-4 inline-block">
+                        <p class="text-xl font-bold text-white">
+                            🔍 SEARCH RESULTS FOR "<span class="text-yellow-300">{{ $searchTerm }}</span>": 
+                            <span class="text-yellow-300 text-2xl">{{ $businesses->count() + $featuredBusinesses->count() }}</span> 
+                            MATCHES! 🎉
+                        </p>
+                    </div>
                 </div>
-            </div>
+            @else
+                <div class="mb-8 text-center">
+                    <div class="retro-business-box p-4 inline-block">
+                        <p class="text-xl font-bold text-white">
+                            SHOWING <span class="text-yellow-300 text-2xl">{{ $businesses->count() + $featuredBusinesses->count() }}</span> 
+                            TOTALLY RAD BUSINESSES! 🎉
+                        </p>
+                    </div>
+                </div>
+            @endif
 
             <!-- Business Grid -->
-            <div x-show="!isLoading">
+            <div>
                 <h2 class="text-3xl font-bold retro-business-text text-center mb-8">
                     🏬 ALL BUSINESSES 🏬
                 </h2>
@@ -370,20 +376,21 @@
             </div>
 
             <!-- No Results for Search -->
-            <div x-show="!isLoading && filteredBusinesses.length === 0 && (searchTerm || selectedIndustry)" 
-                 class="text-center py-12">
-                <div class="retro-business-box p-12 mx-auto max-w-2xl">
-                    <div class="text-8xl mb-6 glow">🔍</div>
-                    <h3 class="text-3xl font-bold text-white mb-4">NO RESULTS FOUND!</h3>
-                    <p class="text-xl text-yellow-300 font-bold mb-6">
-                        Try different search terms or check out all our radical businesses!
-                    </p>
-                    <button @click="searchTerm = ''; selectedIndustry = ''; filterBusinesses();"
-                            class="bg-yellow-300 hover:bg-white text-purple-800 px-8 py-4 rounded-full font-bold text-lg transition-all duration-200 transform hover:scale-110 glow">
-                        🎯 CLEAR FILTERS 🎯
-                    </button>
+            @if($searchTerm && $businesses->isEmpty() && $featuredBusinesses->isEmpty())
+                <div class="text-center py-12">
+                    <div class="retro-business-box p-12 mx-auto max-w-2xl">
+                        <div class="text-8xl mb-6 glow">🔍</div>
+                        <h3 class="text-3xl font-bold text-white mb-4">NO RESULTS FOUND!</h3>
+                        <p class="text-xl text-yellow-300 font-bold mb-6">
+                            No businesses match "<span class="text-white">{{ $searchTerm }}</span>". Try different search terms or check out all our radical businesses!
+                        </p>
+                        <a href="{{ route('businesses.index') }}"
+                           class="button-text bg-yellow-300 hover:bg-white text-purple-800 px-8 py-4 rounded-full font-bold text-lg transition-all duration-200 transform hover:scale-110 glow">
+                            🎯 CLEAR SEARCH 🎯
+                        </a>
+                    </div>
                 </div>
-            </div>
+            @endif
         </div>
     </div>
 </div>

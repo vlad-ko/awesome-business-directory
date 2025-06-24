@@ -19,7 +19,7 @@
 
 ### Testing
 ```bash
-# Run all tests (111 tests, 437 assertions - all passing ✅)
+# Run all tests (118 tests, 459 assertions - all passing ✅)
 ./vendor/bin/sail artisan test
 
 # Run specific test files
@@ -27,6 +27,7 @@
 ./vendor/bin/sail artisan test tests/Feature/BusinessOnboardingMultiStepLoggingTest.php
 ./vendor/bin/sail artisan test tests/Feature/BusinessListingTest.php
 ./vendor/bin/sail artisan test tests/Feature/BusinessDetailPageTest.php
+./vendor/bin/sail artisan test tests/Feature/BusinessSearchTest.php
 ./vendor/bin/sail artisan test tests/Feature/AdminAuthTest.php
 ./vendor/bin/sail artisan test tests/Feature/AdminBusinessManagementTest.php
 
@@ -144,6 +145,49 @@ Our design balances **funky aesthetics** with **readable content**:
 - `resources/views/businesses/index.blade.php` - Business listings
 - `resources/views/welcome.blade.php` - Homepage
 - Both use consistent typography classes for optimal readability
+
+## 🔍 Business Search Features
+
+### Search Functionality
+The business directory includes comprehensive search capabilities:
+
+```php
+// Search URL format
+GET /businesses?search=pizza
+GET /businesses?search=software development
+```
+
+### Search Features
+- ✅ **Case-insensitive search** - "PIZZA" matches "pizza" 
+- ✅ **Partial matches** - "pizza" matches "Tony's Pizza Palace"
+- ✅ **Multi-field search** - Searches both business name AND description
+- ✅ **Approved businesses only** - Security filtering maintained
+- ✅ **Server-side processing** - Fast, reliable search
+- ✅ **Clear search functionality** - Easy reset with one click
+- ✅ **Search results counter** - Shows number of matches found
+- ✅ **No results handling** - Helpful messaging when nothing matches
+
+### Search Implementation
+```php
+// Controller logic (BusinessController@index)
+$searchTerm = $request->get('search');
+if ($searchTerm) {
+    $businessesQuery->where(function($query) use ($searchTerm) {
+        $query->where('business_name', 'LIKE', '%' . $searchTerm . '%')
+              ->orWhere('description', 'LIKE', '%' . $searchTerm . '%');
+    });
+}
+```
+
+### Testing Search
+```bash
+# Run search-specific tests
+./vendor/bin/sail artisan test tests/Feature/BusinessSearchTest.php
+
+# Test specific search scenarios
+./vendor/bin/sail artisan test --filter=search_is_case_insensitive
+./vendor/bin/sail artisan test --filter=it_can_search_businesses_by_name
+```
 
 ## 🔐 Admin Access
 

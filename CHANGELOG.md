@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added
+
+- **Business Search Functionality (TDD Implementation)**
+  - Implemented comprehensive server-side search for businesses by name and description
+  - Added case-insensitive, partial-match search capabilities
+  - Created clean, simple search interface with industry filter removal
+  - Built search results display with match counter and clear functionality
+  - Added proper no-results handling with helpful user messaging
+  - Implemented search term preservation in form input after submission
+  - Maintained Sentry tracking integration for search interactions
+  - Created comprehensive test suite with 7 search-specific tests covering all scenarios
+  - Enhanced business listing controller with search parameter handling
+  - Simplified Alpine.js component to focus on click tracking only
+
 ### Fixed
 
 - **Comprehensive Test Suite Improvements**
