@@ -4,6 +4,27 @@
 
 ### Added
 
+- **Enhanced Sentry Integration Documentation**
+  - Comprehensive rewrite of SENTRY_INTEGRATION.md to eliminate duplicate content
+  - Added detailed distributed tracing explanation connecting frontend and backend
+  - Documented trace propagation headers and form submission tracing
+  - Improved examples showing complete critical experience tracking
+  - Updated terminology from "user journey" to "critical experience"
+  - Reduced documentation from 6611 lines to ~400 lines while improving comprehensiveness
+
+### Changed
+
+- **Homepage Design Restoration**
+  - Restored vibrant retro-90s design with animated cyber grid background
+  - Added twinkling animated stars and scrolling marquee text
+  - Implemented rainbow animated text effects and glowing elements
+  - Enhanced button styling with neon effects and hover animations
+  - Improved layout spacing and padding throughout the page
+  - Maintained all Sentry tracking and Alpine.js functionality
+  - Removed interactive demo section for cleaner user experience
+
+### Added
+
 - **Business Search Functionality (TDD Implementation)**
   - Implemented comprehensive server-side search for businesses by name and description
   - Added case-insensitive, partial-match search capabilities
