@@ -19,9 +19,9 @@ class SentryJavaScriptIntegrationTest extends TestCase
         $sentryContent = file_get_contents(resource_path('js/sentry.js'));
         $appContent = file_get_contents(resource_path('js/app.js'));
         
-        // Verify Sentry.js structure
+        // Verify Sentry.js structure - should only use @sentry/browser (no deprecated @sentry/tracing)
         $this->assertStringContainsString('import * as Sentry from "@sentry/browser"', $sentryContent);
-        $this->assertStringContainsString('import { BrowserTracing } from "@sentry/tracing"', $sentryContent);
+        $this->assertStringNotContainsString('@sentry/tracing', $sentryContent, 'Should not use deprecated @sentry/tracing package');
         $this->assertStringContainsString('export function initializeAlpineIntegration', $sentryContent);
         $this->assertStringContainsString('export const SentryPerformance', $sentryContent);
         $this->assertStringContainsString('export const BusinessDirectoryTracking', $sentryContent);
@@ -47,7 +47,7 @@ class SentryJavaScriptIntegrationTest extends TestCase
         $this->assertStringContainsString('autoSessionTracking: true', $sentryContent);
         $this->assertStringContainsString('beforeSend(event, hint)', $sentryContent);
         $this->assertStringContainsString('beforeBreadcrumb(breadcrumb, hint)', $sentryContent);
-        $this->assertStringContainsString('new BrowserTracing', $sentryContent);
+        $this->assertStringContainsString('browserTracingIntegration', $sentryContent);
     }
 
     /** @test */
@@ -115,9 +115,9 @@ class SentryJavaScriptIntegrationTest extends TestCase
     {
         $packageJson = json_decode(file_get_contents(base_path('package.json')), true);
         
-        // Verify Sentry dependencies
+        // Verify Sentry dependencies - should only have @sentry/browser (no deprecated @sentry/tracing)
         $this->assertArrayHasKey('@sentry/browser', $packageJson['dependencies']);
-        $this->assertArrayHasKey('@sentry/tracing', $packageJson['dependencies']);
+        $this->assertArrayNotHasKey('@sentry/tracing', $packageJson['dependencies'], 'Should not use deprecated @sentry/tracing package');
         $this->assertArrayHasKey('alpinejs', $packageJson['dependencies']);
     }
 

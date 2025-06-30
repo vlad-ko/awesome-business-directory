@@ -408,7 +408,22 @@ class BusinessOnboardingController extends Controller
                 ->with('success', 'Business submitted for review!');
 
         } catch (\Exception $e) {
-            // Log error
+            // Use Sentry.captureException in try-catch blocks as per new rules
+            \Sentry\captureException($e, [
+                'tags' => [
+                    'component' => 'business_onboarding',
+                    'step' => 'final_submission',
+                    'feature' => 'multi_step_form'
+                ],
+                'extra' => [
+                    'input_data' => $allData,
+                    'processing_time_ms' => (microtime(true) - $startTime) * 1000,
+                    'session_id' => session()->getId(),
+                    'user_ip' => $request->ip()
+                ]
+            ]);
+
+            // Also log through BusinessLogger for comprehensive tracking
             BusinessLogger::applicationError($e, 'multi_step_business_creation_failed', [
                 'input_data' => $allData,
                 'processing_time_ms' => (microtime(true) - $startTime) * 1000,

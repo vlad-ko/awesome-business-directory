@@ -4,16 +4,20 @@
 
 This guide provides comprehensive documentation for Sentry.io integration in the Awesome Business Directory Laravel application. Sentry provides application performance monitoring (APM), error tracking, and user experience monitoring to help maintain a high-quality user experience.
 
+**Updated to follow the latest Sentry integration rules and best practices.**
+
 ## Table of Contents
 
 1. [Benefits & Value](#benefits--value)
 2. [Installation & Setup](#installation--setup)
 3. [Core Concepts](#core-concepts)
-4. [BusinessLogger Service](#businesslogger-service)
-5. [Frontend Integration](#frontend-integration)
-6. [Testing Strategy](#testing-strategy)
-7. [Production Considerations](#production-considerations)
-8. [Troubleshooting](#troubleshooting)
+4. [New Rules & Patterns](#new-rules--patterns)
+5. [BusinessLogger Service](#businesslogger-service)
+6. [Frontend Integration](#frontend-integration)
+7. [Exception Handling](#exception-handling)
+8. [Testing Strategy](#testing-strategy)
+9. [Production Considerations](#production-considerations)
+10. [Troubleshooting](#troubleshooting)
 
 ## Benefits & Value
 
@@ -92,7 +96,7 @@ SENTRY_PROFILES_SAMPLE_RATE=0.1
 # Privacy
 SENTRY_SEND_DEFAULT_PII=false
 
-# Logs Integration
+# Logs Integration (NEW)
 SENTRY_ENABLE_LOGS=true
 ```
 
@@ -100,6 +104,125 @@ SENTRY_ENABLE_LOGS=true
 
 ```bash
 ./vendor/bin/sail artisan sentry:test
+```
+
+## New Rules & Patterns
+
+### Frontend JavaScript Configuration
+
+The updated JavaScript configuration follows the new rules:
+
+```javascript
+import * as Sentry from "@sentry/browser";
+
+Sentry.init({
+    dsn: "https://examplePublicKey@o0.ingest.sentry.io/0",
+
+    // Enable new structured logging (REQUIRED)
+    _experiments: {
+        enableLogs: true,
+    },
+
+    integrations: [
+        // Send console.log, console.error, and console.warn calls as logs to Sentry
+        Sentry.consoleLoggingIntegration({ levels: ["log", "error", "warn"] }),
+    ],
+});
+
+// Get logger for structured logging
+const { logger } = Sentry;
+```
+
+### Exception Tracking
+
+Use `Sentry.captureException(error)` in try-catch blocks:
+
+```javascript
+try {
+    // Some risky operation
+    doSomething();
+} catch (error) {
+    Sentry.captureException(error);
+    logger.error("Operation failed", { error: error.message });
+}
+```
+
+### Tracing with Sentry.startSpan
+
+Use `Sentry.startSpan` for meaningful actions like button clicks, API calls, and function calls:
+
+#### UI Component Actions
+
+```javascript
+function TestComponent() {
+  const handleTestButtonClick = () => {
+    // Create a transaction/span to measure performance
+    Sentry.startSpan(
+      {
+        op: "ui.click",
+        name: "Test Button Click",
+      },
+      (span) => {
+        const value = "some config";
+        const metric = "some metric";
+
+        // Metrics can be added to the span
+        span.setAttribute("config", value);
+        span.setAttribute("metric", metric);
+
+        doSomething();
+      },
+    );
+  };
+
+  return (
+    <button type="button" onClick={handleTestButtonClick}>
+      Test Sentry
+    </button>
+  );
+}
+```
+
+#### API Calls
+
+```javascript
+async function fetchUserData(userId) {
+  return Sentry.startSpan(
+    {
+      op: "http.client",
+      name: `GET /api/users/${userId}`,
+    },
+    async () => {
+      const response = await fetch(`/api/users/${userId}`);
+      const data = await response.json();
+      return data;
+    },
+  );
+}
+```
+
+### Structured Logging
+
+Use `logger.fmt` template literal function for structured logs:
+
+```javascript
+const { logger } = Sentry;
+
+logger.trace("Starting database connection", { database: "users" });
+logger.debug(logger.fmt`Cache miss for user: ${userId}`);
+logger.info("Updated profile", { profileId: 345 });
+logger.warn("Rate limit reached for endpoint", {
+  endpoint: "/api/results/",
+  isEnterprise: false,
+});
+logger.error("Failed to process payment", {
+  orderId: "order_123",
+  amount: 99.99,
+});
+logger.fatal("Database connection pool exhausted", {
+  database: "users",
+  activeConnections: 100,
+});
 ```
 
 ## Core Concepts
@@ -249,14 +372,14 @@ The frontend integration provides automatic error tracking, performance monitori
 **resources/js/sentry.js**:
 ```javascript
 import * as Sentry from "@sentry/browser";
-import { BrowserTracing } from "@sentry/tracing";
+// BrowserTracing is now part of @sentry/browser (no separate import needed)
 
 Sentry.init({
     dsn: window.sentryConfig?.dsn || '',
     environment: window.sentryConfig?.environment || 'development',
     
     integrations: [
-        new BrowserTracing({
+        Sentry.browserTracingIntegration({
             // Enable distributed tracing - this is the key setting
             tracePropagationTargets: [window.location.hostname, /^\//],
         }),
@@ -404,6 +527,20 @@ window.sentryConfig = {
     }
 };
 </script>
+```
+
+## Exception Handling
+
+Use `Sentry.captureException(error)` in try-catch blocks:
+
+```javascript
+try {
+    // Some risky operation
+    doSomething();
+} catch (error) {
+    Sentry.captureException(error);
+    logger.error("Operation failed", { error: error.message });
+}
 ```
 
 ## Testing Strategy

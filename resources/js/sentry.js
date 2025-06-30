@@ -1,17 +1,23 @@
 import * as Sentry from "@sentry/browser";
-import { BrowserTracing } from "@sentry/tracing";
 
-// Initialize Sentry with comprehensive configuration
+// Initialize Sentry with comprehensive configuration following new rules
 Sentry.init({
     dsn: window.sentryConfig?.dsn || '',
     environment: window.sentryConfig?.environment || 'development',
     
+    // Enable new structured logging
+    _experiments: {
+        enableLogs: true,
+    },
+    
     // Performance Monitoring
     integrations: [
-        new BrowserTracing({
+        Sentry.browserTracingIntegration({
             // Capture interactions automatically
             tracePropagationTargets: [window.location.hostname, /^\//],
         }),
+        // Send console.log, console.error, and console.warn calls as logs to Sentry
+        Sentry.consoleLoggingIntegration({ levels: ["log", "error", "warn"] }),
     ],
     
     // Performance - Full tracing in development, sampled in production
@@ -55,6 +61,9 @@ Sentry.init({
         return breadcrumb;
     }
 });
+
+// Get logger for structured logging
+const { logger } = Sentry;
 
 // Helper function for feature detection
 function getBusinessFeatureFromElement(element) {
@@ -348,28 +357,49 @@ export const BusinessDirectoryTracking = {
     },
 
     /**
-     * Track business card interactions
+     * Track business card interactions using new tracing rules
      */
     trackBusinessCardClick(businessId, businessName) {
-        try {
-            Sentry.addBreadcrumb({
-                category: 'business.interaction',
-                message: `Business card clicked: ${businessName}`,
-                data: {
-                    business_id: businessId,
-                    business_name: businessName,
-                    action: 'card_click',
-                    feature: 'business_discovery',
-                    timestamp: new Date().toISOString()
-                },
-                level: 'info'
-            });
+        // Use Sentry.startSpan for meaningful actions like button clicks
+        Sentry.startSpan(
+            {
+                op: "ui.click",
+                name: "Business Card Click",
+            },
+            (span) => {
+                try {
+                    // Attach attributes based on relevant information
+                    span.setAttribute("business_id", businessId);
+                    span.setAttribute("business_name", businessName);
+                    span.setAttribute("feature", "business_discovery");
 
-            // Set user context
-            Sentry.setTag('last_viewed_business', businessId);
-        } catch (error) {
-            console.warn('Business card click tracking failed:', error);
-        }
+                    Sentry.addBreadcrumb({
+                        category: 'business.interaction',
+                        message: `Business card clicked: ${businessName}`,
+                        data: {
+                            business_id: businessId,
+                            business_name: businessName,
+                            action: 'card_click',
+                            feature: 'business_discovery',
+                            timestamp: new Date().toISOString()
+                        },
+                        level: 'info'
+                    });
+
+                    // Set user context
+                    Sentry.setTag('last_viewed_business', businessId);
+
+                    // Use structured logging with logger.fmt
+                    logger.info(logger.fmt`Business card clicked: ${businessName}`, {
+                        businessId: businessId,
+                        businessName: businessName
+                    });
+                } catch (error) {
+                    Sentry.captureException(error);
+                    logger.error("Business card click tracking failed", { error: error.message });
+                }
+            }
+        );
     },
 
     /**
@@ -521,22 +551,36 @@ export const BusinessDirectoryTracking = {
 // SentryTracing utilities for distributed tracing
 export const SentryTracing = {
     /**
-     * Track form submission with distributed tracing
+     * Track form submission with distributed tracing using new rules
      */
     trackFormSubmission(formElement, formName) {
-        try {
-            const transaction = Sentry.startTransaction({
+        // Use Sentry.startSpan for meaningful actions like form submissions
+        return Sentry.startSpan(
+            {
+                op: "form.submit",
                 name: `Form Submission: ${formName}`,
-                op: 'form.submit'
-            });
+            },
+            (span) => {
+                try {
+                    // Attach attributes based on relevant information
+                    span.setAttribute("form_name", formName);
+                    span.setAttribute("form_method", formElement.method || 'POST');
+                    span.setAttribute("form_action", formElement.action || window.location.pathname);
 
-            // Add trace headers for distributed tracing
-            const traceHeaders = {
-                'sentry-trace': transaction.toTraceparent(),
-                'baggage': transaction.toBaggage()
-            };
+                    // Add trace headers for distributed tracing
+                    const traceHeaders = {
+                        'sentry-trace': span.toTraceparent(),
+                        'baggage': span.toBaggage()
+                    };
 
-            return { transaction, traceHeaders };
+                    // Use structured logging
+                    logger.info(logger.fmt`Form submission started: ${formName}`, {
+                        formName: formName,
+                        method: formElement.method,
+                        action: formElement.action
+                    });
+
+                    return { span, traceHeaders };
         } catch (error) {
             console.warn('Form submission tracking failed:', error);
             return { transaction: null, traceHeaders: {} };
