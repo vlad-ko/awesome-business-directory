@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+let's not get overzealous testing, what is already tested by sentry sdk we want to only focus on essential business logic. keep it simple.

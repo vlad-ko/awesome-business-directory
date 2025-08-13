@@ -1,44 +1,61 @@
+/**
+ * Enhanced Sentry Frontend Implementation
+ * Following Latest Best Practices from Official SDK
+ */
+
 import * as Sentry from "@sentry/browser";
 
-// Modern Sentry v9 initialization with comprehensive configuration
+// Initialize Sentry with modern configuration
 Sentry.init({
     dsn: window.sentryConfig?.dsn || '',
     environment: window.sentryConfig?.environment || 'development',
     
-    // Enable structured logging (new in v9)
+    // Enable structured logging (required for new patterns)
     _experiments: {
         enableLogs: true,
     },
     
-    // Modern integrations (no deprecated packages)
+    // Modern integrations
     integrations: [
+        // Browser tracing with proper configuration
         Sentry.browserTracingIntegration({
-            // Capture interactions automatically
             tracePropagationTargets: [window.location.hostname, /^\//],
+            // Enable interaction tracing
+            enableInteractions: true,
+            // Enable long task instrumentation
+            enableLongTask: true,
+            // Enable INP (Interaction to Next Paint) tracking
+            enableInp: true,
         }),
-        // Send console logs as structured logs
-        Sentry.consoleLoggingIntegration({ levels: ["log", "error", "warn"] }),
-        // Capture unhandled rejections
-        Sentry.globalHandlersIntegration({
-            onunhandledrejection: true,
-            onerror: true,
+        // Console logging integration
+        Sentry.consoleLoggingIntegration({ 
+            levels: ["log", "error", "warn"] 
+        }),
+        // Replay integration for session recording (optional)
+        Sentry.replayIntegration({
+            maskAllText: false,
+            blockAllMedia: false,
+            // Only record on errors in production
+            replaysSessionSampleRate: window.sentryConfig?.environment === 'production' ? 0 : 0.1,
+            replaysOnErrorSampleRate: 1.0,
         }),
     ],
     
     // Performance monitoring
     tracesSampleRate: window.sentryConfig?.tracesSampleRate || 1.0,
+    
+    // Session tracking
     autoSessionTracking: true,
+    
+    // Release tracking
     release: window.sentryConfig?.release || '1.0.0',
     
-    // Enhanced user context
+    // User context
     initialScope: {
         user: window.sentryConfig?.user || null,
         tags: {
             component: 'frontend',
-            page_type: getPageType()
-        },
-        contexts: {
-            page: window.sentryConfig?.pageContext || {}
+            app_version: window.sentryConfig?.release || '1.0.0',
         }
     },
     
@@ -48,574 +65,381 @@ Sentry.init({
         if (event.exception) {
             const error = hint.originalException;
             
-            // Don't send cancelled requests
-            if (error && error.name === 'AbortError') {
+            // Skip network cancellation errors
+            if (error?.name === 'AbortError' || error?.message?.includes('cancelled')) {
                 return null;
             }
             
-            // Don't send network errors from ad blockers
-            if (error && error.message?.includes('Non-Error promise rejection')) {
-                return null;
-            }
-            
-            // Don't send ResizeObserver loop errors (common browser issue)
-            if (error && error.message?.includes('ResizeObserver loop')) {
+            // Skip common browser extension errors
+            if (error?.stack?.includes('chrome-extension://') || 
+                error?.stack?.includes('moz-extension://')) {
                 return null;
             }
         }
         
+        // Add custom context
+        event.contexts = {
+            ...event.contexts,
+            custom: {
+                viewport: {
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                },
+                screen: {
+                    width: window.screen.width,
+                    height: window.screen.height,
+                },
+            }
+        };
+        
         return event;
     },
-
+    
     // Enhanced breadcrumb processing
     beforeBreadcrumb(breadcrumb, hint) {
-        // Enhance UI interaction breadcrumbs
+        // Enhance UI click breadcrumbs
         if (breadcrumb.category === 'ui.click') {
             const target = hint.event?.target;
             if (target) {
                 breadcrumb.data = {
                     ...breadcrumb.data,
+                    tag: target.tagName,
+                    id: target.id,
+                    'class': target.className,
+                    text: target.innerText?.substring(0, 100),
                     business_feature: getBusinessFeatureFromElement(target),
-                    element_selector: getElementSelector(target),
-                    page_section: getPageSection(target)
                 };
             }
         }
         
-        // Filter out noisy console messages
-        if (breadcrumb.category === 'console' && breadcrumb.level === 'debug') {
-            return null;
+        // Enhance navigation breadcrumbs
+        if (breadcrumb.category === 'navigation') {
+            breadcrumb.data = {
+                ...breadcrumb.data,
+                referrer: document.referrer,
+                viewport_width: window.innerWidth,
+                page_load_time: performance.timing.loadEventEnd - performance.timing.navigationStart,
+            };
         }
         
         return breadcrumb;
     }
 });
 
-// Get structured logger for modern logging patterns
+// Get logger instance for structured logging
 const { logger } = Sentry;
 
-// Helper functions for enhanced context
-function getPageType() {
-    const path = window.location.pathname;
-    if (path === '/') return 'welcome';
-    if (path.includes('/onboard')) return 'onboarding';
-    if (path.includes('/businesses')) return 'directory';
-    if (path.includes('/admin')) return 'admin';
-    return 'other';
-}
+/**
+ * Modern Performance Monitoring using Sentry.startSpan
+ */
+export const ModernPerformanceMonitoring = {
+    /**
+     * Track page interactions with proper span
+     */
+    trackInteraction(interactionType, interactionData, callback) {
+        return Sentry.startSpan({
+            op: `ui.interaction.${interactionType}`,
+            name: `User Interaction: ${interactionType}`,
+        }, (span) => {
+            // Set interaction attributes
+            span.setAttribute('interaction.type', interactionType);
+            Object.entries(interactionData).forEach(([key, value]) => {
+                span.setAttribute(`interaction.${key}`, value);
+            });
+            
+            try {
+                const result = callback(span);
+                
+                // Log the interaction
+                logger.info(logger.fmt`User interaction tracked: ${interactionType}`, {
+                    type: interactionType,
+                    data: interactionData,
+                });
+                
+                return result;
+            } catch (error) {
+                Sentry.captureException(error);
+                logger.error('Interaction tracking failed', { 
+                    error: error.message,
+                    interactionType 
+                });
+                throw error;
+            }
+        });
+    },
+    
+    /**
+     * Track API calls with distributed tracing
+     */
+    trackApiCall(url, method, requestConfig = {}) {
+        return Sentry.startSpan({
+            op: 'http.client',
+            name: `${method} ${url}`,
+        }, async (span) => {
+            // Set HTTP attributes
+            span.setAttribute('http.method', method);
+            span.setAttribute('http.url', url);
+            
+            // Add trace headers for distributed tracing
+            const headers = {
+                ...requestConfig.headers,
+                'sentry-trace': span.toTraceparent(),
+                'baggage': span.toBaggage(),
+            };
+            
+            try {
+                const startTime = performance.now();
+                const response = await fetch(url, {
+                    ...requestConfig,
+                    method,
+                    headers,
+                });
+                
+                const duration = performance.now() - startTime;
+                
+                // Set response attributes
+                span.setAttribute('http.status_code', response.status);
+                span.setAttribute('http.response_content_length', response.headers.get('content-length'));
+                span.setAttribute('http.duration', duration);
+                
+                // Log the API call
+                logger.info(logger.fmt`API call completed: ${method} ${url}`, {
+                    method,
+                    url,
+                    status: response.status,
+                    duration,
+                });
+                
+                return response;
+            } catch (error) {
+                span.setStatus('internal_error');
+                Sentry.captureException(error);
+                logger.error('API call failed', {
+                    error: error.message,
+                    method,
+                    url,
+                });
+                throw error;
+            }
+        });
+    },
+    
+    /**
+     * Track form submissions with validation
+     */
+    trackFormSubmission(formName, formData, submitCallback) {
+        return Sentry.startSpan({
+            op: 'form.submit',
+            name: `Form Submission: ${formName}`,
+        }, async (span) => {
+            // Set form attributes
+            span.setAttribute('form.name', formName);
+            span.setAttribute('form.fields_count', Object.keys(formData).length);
+            
+            // Track field completion
+            const completedFields = Object.entries(formData)
+                .filter(([_, value]) => value && value.toString().trim())
+                .length;
+            
+            span.setAttribute('form.completed_fields', completedFields);
+            span.setAttribute('form.completion_rate', (completedFields / Object.keys(formData).length) * 100);
+            
+            try {
+                const result = await submitCallback(span, formData);
+                
+                logger.info(logger.fmt`Form submitted successfully: ${formName}`, {
+                    formName,
+                    fieldsCount: Object.keys(formData).length,
+                    completedFields,
+                });
+                
+                return result;
+            } catch (error) {
+                span.setStatus('internal_error');
+                
+                // Check if it's a validation error
+                if (error.name === 'ValidationError' || error.status === 422) {
+                    logger.warn('Form validation failed', {
+                        formName,
+                        errors: error.errors || error.message,
+                    });
+                } else {
+                    Sentry.captureException(error);
+                    logger.error('Form submission failed', {
+                        error: error.message,
+                        formName,
+                    });
+                }
+                
+                throw error;
+            }
+        });
+    },
+};
 
+/**
+ * Business Directory Specific Tracking with Modern Patterns
+ */
+export const BusinessTracking = {
+    /**
+     * Track business card interactions
+     */
+    trackBusinessCardInteraction(businessId, businessName, interactionType) {
+        return ModernPerformanceMonitoring.trackInteraction('business_card', {
+            business_id: businessId,
+            business_name: businessName,
+            action: interactionType,
+        }, (span) => {
+            // Add business-specific context
+            Sentry.setContext('business_interaction', {
+                business_id: businessId,
+                business_name: businessName,
+                interaction_type: interactionType,
+                timestamp: new Date().toISOString(),
+            });
+            
+            // Set user preference
+            Sentry.setTag('last_viewed_business', businessId);
+        });
+    },
+    
+    /**
+     * Track search with results
+     */
+    trackSearch(searchTerm, filters, resultsCount) {
+        return Sentry.startSpan({
+            op: 'search',
+            name: 'Business Search',
+        }, (span) => {
+            span.setAttribute('search.term', searchTerm);
+            span.setAttribute('search.filters_count', Object.keys(filters).length);
+            span.setAttribute('search.results_count', resultsCount);
+            
+            // Log search analytics
+            logger.info(logger.fmt`Search performed: "${searchTerm}"`, {
+                term: searchTerm,
+                filters,
+                resultsCount,
+            });
+            
+            // Track zero results
+            if (resultsCount === 0) {
+                logger.warn('Search returned no results', {
+                    term: searchTerm,
+                    filters,
+                });
+            }
+        });
+    },
+    
+    /**
+     * Track onboarding progress
+     */
+    trackOnboardingProgress(step, stepData) {
+        const progress = (step / 4) * 100;
+        
+        return Sentry.startSpan({
+            op: 'onboarding.step',
+            name: `Onboarding Step ${step}`,
+        }, (span) => {
+            span.setAttribute('onboarding.step', step);
+            span.setAttribute('onboarding.progress', progress);
+            span.setAttribute('onboarding.fields_completed', Object.keys(stepData).length);
+            
+            // Set milestone context
+            Sentry.setContext('onboarding_progress', {
+                current_step: step,
+                progress_percentage: progress,
+                completed_fields: Object.keys(stepData),
+            });
+            
+            logger.info(logger.fmt`Onboarding step ${step} completed`, {
+                step,
+                progress,
+                fieldsCompleted: Object.keys(stepData).length,
+            });
+        });
+    },
+};
+
+/**
+ * Performance Observer for Core Web Vitals
+ */
+export const WebVitalsTracking = {
+    init() {
+        // Track Largest Contentful Paint (LCP)
+        new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+                logger.info('Core Web Vital: LCP', {
+                    value: entry.startTime,
+                    element: entry.element?.tagName,
+                });
+                
+                Sentry.setMeasurement('lcp', entry.startTime, 'millisecond');
+            }
+        }).observe({ entryTypes: ['largest-contentful-paint'] });
+        
+        // Track First Input Delay (FID)
+        new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+                logger.info('Core Web Vital: FID', {
+                    value: entry.processingStart - entry.startTime,
+                    eventType: entry.name,
+                });
+                
+                Sentry.setMeasurement('fid', entry.processingStart - entry.startTime, 'millisecond');
+            }
+        }).observe({ entryTypes: ['first-input'] });
+        
+        // Track Cumulative Layout Shift (CLS)
+        let clsValue = 0;
+        new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+                if (!entry.hadRecentInput) {
+                    clsValue += entry.value;
+                    logger.info('Core Web Vital: CLS', {
+                        value: clsValue,
+                        sources: entry.sources?.length || 0,
+                    });
+                    
+                    Sentry.setMeasurement('cls', clsValue, 'none');
+                }
+            }
+        }).observe({ entryTypes: ['layout-shift'] });
+    },
+};
+
+// Helper function to determine business feature from element
 function getBusinessFeatureFromElement(element) {
     if (!element) return 'unknown';
     
-    // Check for business-related features
-    if (element.closest('[data-business-id]')) return 'business_card';
-    if (element.closest('.onboarding-form')) return 'business_onboarding';
-    if (element.closest('.search-form')) return 'business_search';
-    if (element.closest('.admin-panel')) return 'admin_management';
+    const features = {
+        '[data-business-id]': 'business_card',
+        '.onboarding-form': 'business_onboarding',
+        '.search-form': 'business_search',
+        '.admin-panel': 'admin_dashboard',
+        '.business-detail': 'business_detail',
+    };
+    
+    for (const [selector, feature] of Object.entries(features)) {
+        if (element.closest(selector)) {
+            return feature;
+        }
+    }
+    
     return 'general';
 }
 
-function getElementSelector(element) {
-    if (!element) return '';
-    
-    // Create a simple selector path
-    const tagName = element.tagName.toLowerCase();
-    const id = element.id ? `#${element.id}` : '';
-    const className = element.className ? `.${element.className.split(' ').join('.')}` : '';
-    
-    return `${tagName}${id}${className}`.substring(0, 100); // Limit length
+// Initialize on DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        WebVitalsTracking.init();
+        logger.info('Sentry enhanced tracking initialized');
+    });
+} else {
+    WebVitalsTracking.init();
+    logger.info('Sentry enhanced tracking initialized');
 }
 
-function getPageSection(element) {
-    if (!element) return 'unknown';
-    
-    // Identify page sections
-    const section = element.closest('header, nav, main, footer, aside, section');
-    if (section) {
-        const sectionTag = section.tagName.toLowerCase();
-        const sectionClass = section.className.split(' ')[0] || '';
-        return `${sectionTag}${sectionClass ? '.' + sectionClass : ''}`;
-    }
-    return 'body';
-}
-
-// Enhanced Performance Monitoring with Business Metrics
-export const SentryPerformance = {
-    /**
-     * Track page load with comprehensive metrics
-     */
-    trackPageLoad() {
-        if (typeof performance !== 'undefined') {
-            window.addEventListener('load', () => {
-                Sentry.startSpan({
-                    op: "navigation.load",
-                    name: "Page Load Complete"
-                }, (span) => {
-                    try {
-                        const navigation = performance.getEntriesByType('navigation')[0];
-                        if (navigation) {
-                            // Set comprehensive measurements
-                            const loadTime = navigation.loadEventEnd - navigation.loadEventStart;
-                            const domTime = navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart;
-                            const ttfb = navigation.responseStart - navigation.fetchStart;
-                            
-                            span.setAttribute("load_time_ms", loadTime);
-                            span.setAttribute("dom_time_ms", domTime);
-                            span.setAttribute("ttfb_ms", ttfb);
-                            span.setAttribute("page_type", getPageType());
-                            
-                            // Set Sentry measurements
-                            Sentry.setMeasurement('page.load_time', loadTime, 'millisecond');
-                            Sentry.setMeasurement('page.dom_content_loaded', domTime, 'millisecond');
-                            Sentry.setMeasurement('page.ttfb', ttfb, 'millisecond');
-                            
-                            // Structured logging
-                            logger.info(logger.fmt`Page load completed in ${loadTime}ms`, {
-                                loadTime,
-                                domTime,
-                                ttfb,
-                                pageType: getPageType()
-                            });
-                        }
-                    } catch (error) {
-                        Sentry.captureException(error);
-                        logger.warn("Performance tracking failed", { error: error.message });
-                    }
-                });
-            });
-        }
-    },
-
-    /**
-     * Track Core Web Vitals with enhanced context
-     */
-    trackWebVitals() {
-        // Track LCP (Largest Contentful Paint)
-        new PerformanceObserver((entryList) => {
-            const entries = entryList.getEntries();
-            const lastEntry = entries[entries.length - 1];
-            
-            Sentry.setMeasurement('lcp', lastEntry.startTime, 'millisecond');
-            logger.info(logger.fmt`LCP recorded: ${lastEntry.startTime}ms`, {
-                lcp: lastEntry.startTime,
-                element: lastEntry.element?.tagName
-            });
-        }).observe({ entryTypes: ['largest-contentful-paint'] });
-
-        // Track FID (First Input Delay)
-        new PerformanceObserver((entryList) => {
-            const entries = entryList.getEntries();
-            entries.forEach(entry => {
-                Sentry.setMeasurement('fid', entry.processingStart - entry.startTime, 'millisecond');
-                logger.info(logger.fmt`FID recorded: ${entry.processingStart - entry.startTime}ms`, {
-                    fid: entry.processingStart - entry.startTime,
-                    eventType: entry.name
-                });
-            });
-        }).observe({ entryTypes: ['first-input'] });
-
-        // Track CLS (Cumulative Layout Shift)
-        let clsValue = 0;
-        new PerformanceObserver((entryList) => {
-            for (const entry of entryList.getEntries()) {
-                if (!entry.hadRecentInput) {
-                    clsValue += entry.value;
-                }
-            }
-            Sentry.setMeasurement('cls', clsValue);
-            logger.info(logger.fmt`CLS updated: ${clsValue}`, { cls: clsValue });
-        }).observe({ entryTypes: ['layout-shift'] });
-    }
-};
-
-// Enhanced Business Directory Tracking with Modern Patterns
-export const BusinessDirectoryTracking = {
-    /**
-     * Track business card interactions with comprehensive context
-     */
-    trackBusinessCardClick(businessId, businessName) {
-        Sentry.startSpan(
-            {
-                op: "ui.click",
-                name: "Business Card Click",
-            },
-            (span) => {
-                // Attach comprehensive attributes
-                span.setAttribute("business_id", businessId);
-                span.setAttribute("business_name", businessName);
-                span.setAttribute("feature", "business_discovery");
-                span.setAttribute("page_type", getPageType());
-                
-                // Structured logging with template literals
-                logger.info(logger.fmt`Business card clicked: ${businessName}`, {
-                    businessId,
-                    businessName,
-                    pageType: getPageType(),
-                    timestamp: new Date().toISOString()
-                });
-                
-                // Add breadcrumb for user journey
-                Sentry.addBreadcrumb({
-                    category: 'business.interaction',
-                    message: `Business card viewed: ${businessName}`,
-                    data: {
-                        business_id: businessId,
-                        business_name: businessName,
-                        feature: 'discovery'
-                    },
-                    level: 'info'
-                });
-            }
-        );
-    },
-
-    /**
-     * Enhanced form submission tracking with distributed tracing
-     */
-    trackFormSubmission(formElement, formName) {
-        return Sentry.startSpan(
-            {
-                op: "form.submit",
-                name: `Form Submission: ${formName}`,
-            },
-            (span) => {
-                // Comprehensive form attributes
-                span.setAttribute("form_name", formName);
-                span.setAttribute("form_method", formElement.method || 'POST');
-                span.setAttribute("form_action", formElement.action || window.location.href);
-                span.setAttribute("form_fields_count", formElement.elements.length);
-                span.setAttribute("page_type", getPageType());
-                
-                // Analyze form data for insights (without PII)
-                const formData = new FormData(formElement);
-                const fieldCount = Array.from(formData.keys()).length;
-                const hasFileUploads = Array.from(formElement.elements).some(el => el.type === 'file');
-                
-                span.setAttribute("filled_fields_count", fieldCount);
-                span.setAttribute("has_file_uploads", hasFileUploads);
-                
-                // Structured logging
-                logger.info(logger.fmt`Form submission started: ${formName}`, {
-                    formName,
-                    fieldCount,
-                    hasFileUploads,
-                    pageType: getPageType()
-                });
-                
-                // Return trace headers for distributed tracing
-                return {
-                    span,
-                    traceHeaders: {
-                        'sentry-trace': span.toTraceparent(),
-                        'baggage': span.toBaggage()
-                    }
-                };
-            }
-        );
-    },
-
-    /**
-     * Track onboarding progress with enhanced analytics
-     */
-    trackOnboardingProgress(step, stepData = {}) {
-        Sentry.startSpan(
-            {
-                op: "business.onboarding.progress",
-                name: `Onboarding Step ${step}`,
-            },
-            (span) => {
-                // Step-specific attributes
-                span.setAttribute("step", step);
-                span.setAttribute("total_steps", 4);
-                span.setAttribute("completion_percentage", (step / 4) * 100);
-                
-                // Enhanced step data
-                if (stepData.timeSpent) {
-                    span.setAttribute("time_spent_ms", stepData.timeSpent);
-                }
-                if (stepData.fieldInteractions) {
-                    span.setAttribute("field_interactions", stepData.fieldInteractions);
-                }
-                if (stepData.validationErrors) {
-                    span.setAttribute("validation_errors", stepData.validationErrors);
-                }
-                
-                // Business insights
-                const completionRate = (step / 4) * 100;
-                logger.info(logger.fmt`Onboarding progress: Step ${step} (${completionRate}% complete)`, {
-                    step,
-                    completionRate,
-                    ...stepData
-                });
-                
-                // Track conversion funnel
-                Sentry.addBreadcrumb({
-                    category: 'business.onboarding',
-                    message: `Completed step ${step}`,
-                    data: {
-                        step,
-                        completion_percentage: completionRate,
-                        ...stepData
-                    },
-                    level: 'info'
-                });
-            }
-        );
-    },
-
-    /**
-     * Track validation errors with enhanced context
-     */
-    trackValidationError(fieldName, errorType, context = {}) {
-        Sentry.startSpan(
-            {
-                op: "form.validation.error",
-                name: `Validation Error: ${fieldName}`,
-            },
-            (span) => {
-                span.setAttribute("field_name", fieldName);
-                span.setAttribute("error_type", errorType);
-                span.setAttribute("step", context.step || 'unknown');
-                
-                // Log validation error for analytics
-                logger.warn(logger.fmt`Validation error on field ${fieldName}: ${errorType}`, {
-                    fieldName,
-                    errorType,
-                    context
-                });
-                
-                // Don't capture as exception, just track as breadcrumb
-                Sentry.addBreadcrumb({
-                    category: 'form.validation',
-                    message: `Validation error: ${fieldName}`,
-                    data: {
-                        field_name: fieldName,
-                        error_type: errorType,
-                        ...context
-                    },
-                    level: 'warning'
-                });
-            }
-        );
-    },
-
-    /**
-     * Track search interactions with comprehensive metrics
-     */
-    trackSearchInteraction(searchTerm, resultsCount, searchTime = null) {
-        Sentry.startSpan(
-            {
-                op: "business.search",
-                name: "Business Directory Search",
-            },
-            (span) => {
-                // Search attributes (avoid PII in search terms)
-                span.setAttribute("search_term_length", searchTerm.length);
-                span.setAttribute("results_count", resultsCount);
-                span.setAttribute("has_results", resultsCount > 0);
-                
-                if (searchTime) {
-                    span.setAttribute("search_time_ms", searchTime);
-                }
-                
-                // Search analytics (without exposing search terms)
-                const searchAnalytics = {
-                    termLength: searchTerm.length,
-                    resultsCount,
-                    hasResults: resultsCount > 0,
-                    searchTime
-                };
-                
-                logger.info(logger.fmt`Search performed: ${resultsCount} results`, searchAnalytics);
-                
-                // Track search patterns for insights
-                Sentry.addBreadcrumb({
-                    category: 'business.search',
-                    message: `Search completed with ${resultsCount} results`,
-                    data: searchAnalytics,
-                    level: 'info'
-                });
-            }
-        );
-    }
-};
-
-// Enhanced Error Boundary for Alpine.js Components
-export const SentryErrorBoundary = {
-    /**
-     * Wrap Alpine.js components with error boundaries
-     */
-    wrapAlpineComponent(componentName, componentData) {
-        return {
-            ...componentData,
-            
-            // Enhanced init with error handling
-            init() {
-                try {
-                    if (componentData.init) {
-                        componentData.init.call(this);
-                    }
-                    
-                    logger.debug(logger.fmt`Alpine component initialized: ${componentName}`);
-                } catch (error) {
-                    Sentry.captureException(error, {
-                        tags: {
-                            component: 'alpine',
-                            component_name: componentName,
-                            lifecycle: 'init'
-                        }
-                    });
-                    
-                    logger.error(logger.fmt`Alpine component init failed: ${componentName}`, {
-                        error: error.message,
-                        componentName
-                    });
-                }
-            },
-            
-            // Wrap all methods with error boundaries
-            ...Object.fromEntries(
-                Object.entries(componentData)
-                    .filter(([key, value]) => typeof value === 'function' && key !== 'init')
-                    .map(([key, method]) => [
-                        key,
-                        function(...args) {
-                            try {
-                                return method.apply(this, args);
-                            } catch (error) {
-                                Sentry.captureException(error, {
-                                    tags: {
-                                        component: 'alpine',
-                                        component_name: componentName,
-                                        method: key
-                                    },
-                                    extra: {
-                                        method_args: args
-                                    }
-                                });
-                                
-                                logger.error(logger.fmt`Alpine method failed: ${componentName}.${key}`, {
-                                    error: error.message,
-                                    componentName,
-                                    methodName: key
-                                });
-                                
-                                throw error; // Re-throw to maintain expected behavior
-                            }
-                        }
-                    ])
-            )
-        };
-    }
-};
-
-// Modern Alpine.js Integration with Enhanced Tracking
-export function initializeAlpineIntegration() {
-    if (typeof window.Alpine !== 'undefined') {
-        const Alpine = window.Alpine;
-        
-        // Enhanced tracking directives
-        Alpine.directive('sentry-track', (el, { expression }, { evaluate }) => {
-            try {
-                const data = evaluate(expression);
-                
-                el.addEventListener('click', (event) => {
-                    Sentry.startSpan({
-                        op: "ui.click",
-                        name: "Tracked Element Click"
-                    }, (span) => {
-                        span.setAttribute("element_type", el.tagName.toLowerCase());
-                        span.setAttribute("tracking_data", JSON.stringify(data));
-                        
-                        logger.info("Tracked element clicked", {
-                            element: el.tagName.toLowerCase(),
-                            data
-                        });
-                        
-                        Sentry.addBreadcrumb({
-                            category: 'user.interaction',
-                            message: 'Tracked element clicked',
-                            data: {
-                                element: el.tagName.toLowerCase(),
-                                ...data
-                            }
-                        });
-                    });
-                });
-            } catch (error) {
-                Sentry.captureException(error, {
-                    tags: { component: 'alpine_directive', directive: 'sentry-track' }
-                });
-            }
-        });
-        
-        Alpine.directive('track-change', (el, { expression }, { evaluate }) => {
-            try {
-                const data = evaluate(expression);
-                
-                el.addEventListener('change', (event) => {
-                    BusinessDirectoryTracking.trackFieldInteraction(data.field, el.value);
-                });
-            } catch (error) {
-                Sentry.captureException(error, {
-                    tags: { component: 'alpine_directive', directive: 'track-change' }
-                });
-            }
-        });
-        
-        // Global Alpine error handler
-        Alpine.magic('sentry', () => ({
-            captureException: Sentry.captureException,
-            logger,
-            track: BusinessDirectoryTracking
-        }));
-        
-        logger.info("Alpine.js Sentry integration initialized");
-    }
-}
-
-// Enhanced initialization function
-export function initializeSentryFrontend() {
-    try {
-        // Initialize performance monitoring
-        SentryPerformance.trackPageLoad();
-        SentryPerformance.trackWebVitals();
-        
-        // Initialize Alpine integration
-        initializeAlpineIntegration();
-        
-        // Track page view
-        logger.info(logger.fmt`Page viewed: ${getPageType()}`, {
-            pageType: getPageType(),
-            url: window.location.href,
-            userAgent: navigator.userAgent.substring(0, 100) // Truncate for privacy
-        });
-        
-        // Global unhandled error catcher
-        window.addEventListener('unhandledrejection', (event) => {
-            Sentry.captureException(event.reason, {
-                tags: { error_type: 'unhandled_promise_rejection' }
-            });
-        });
-        
-        logger.info("Sentry frontend integration fully initialized");
-        
-    } catch (error) {
-        // Fallback error handling
-        console.error('Sentry initialization failed:', error);
-        Sentry.captureException(error, {
-            tags: { component: 'sentry_init' }
-        });
-    }
-}
-
-// Auto-initialize if config is available
-if (typeof window !== 'undefined' && window.sentryConfig) {
-    document.addEventListener('DOMContentLoaded', initializeSentryFrontend);
-}
-
-// Export everything for external use
-export {
-    Sentry,
-    logger
-}; 
+// Export for use in other modules
+export { Sentry, logger };

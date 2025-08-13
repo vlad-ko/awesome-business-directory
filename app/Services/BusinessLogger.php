@@ -11,7 +11,7 @@ use function Sentry\addBreadcrumb;
 use function Sentry\captureException;
 use function Sentry\captureMessage;
 use function Sentry\configureScope;
-use function Sentry\startTransaction;
+use App\Services\SentryLogger;
 use Sentry\SentrySdk;
 use Sentry\Tracing\TransactionContext;
 use Sentry\Tracing\SpanContext;
@@ -344,7 +344,7 @@ class BusinessLogger
     }
 
     /**
-     * Start a custom transaction for business operations
+     * Start a custom transaction for business operations (backward compatibility)
      */
     public static function startBusinessTransaction(string $operation, array $metadata = []): ?\Sentry\Tracing\Transaction
     {
@@ -361,6 +361,24 @@ class BusinessLogger
         ]);
         
         return $transaction;
+    }
+
+    /**
+     * Start a custom span for business operations using modern pattern
+     */
+    public static function startBusinessOperation(string $operation, array $metadata, callable $callback): mixed
+    {
+        return SentryLogger::startSpan([
+            'op' => "business.{$operation}",
+            'name' => "Business Operation: {$operation}",
+        ], function ($span) use ($metadata, $callback) {
+            // Set span attributes
+            foreach ($metadata as $key => $value) {
+                $span->setAttribute($key, $value);
+            }
+            
+            return $callback($span);
+        });
     }
 
     /**
