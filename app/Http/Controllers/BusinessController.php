@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Business;
-use App\Services\BusinessLogger;
 use Illuminate\Http\Request;
+use App\Services\BusinessLogger;
+use App\Services\SentryLogger;
 
 class BusinessController extends Controller
 {
@@ -13,9 +14,8 @@ class BusinessController extends Controller
      */
     public function index(Request $request)
     {
-        $startTime = microtime(true);
         $searchTerm = $request->get('search');
-
+        
         // Track if user came from welcome page CTA
         $referrer = $request->header('referer');
         $fromWelcomeCta = false;
@@ -27,106 +27,105 @@ class BusinessController extends Controller
             }
         }
 
-        // Start custom transaction for business listing
-        $transaction = BusinessLogger::startBusinessTransaction('listing', [
+        // Use modern Sentry pattern for tracking business listing
+        return SentryLogger::trackBusinessOperation('listing', [
             'page' => 'index',
             'from_welcome_cta' => $fromWelcomeCta,
             'search_term' => $searchTerm,
-        ]);
+        ], function ($span) use ($request, $searchTerm) {
+            $startTime = microtime(true);
+            
+            // Track database operations
+            $result = SentryLogger::trackDatabaseOperation('business_queries', function ($dbSpan) use ($searchTerm) {
+                // Get all businesses for statistics (before filtering)
+                $allBusinesses = Business::all();
 
-        // Create span for database queries
-        $dbSpan = BusinessLogger::createDatabaseSpan('business_queries', 'Fetching businesses for listing');
+                // Get featured businesses for the featured section (also apply search if provided)
+                $featuredBusinessesQuery = Business::approved()->where('is_featured', true);
+                if ($searchTerm) {
+                    $featuredBusinessesQuery->where(function($query) use ($searchTerm) {
+                        $query->where('business_name', 'LIKE', '%' . $searchTerm . '%')
+                              ->orWhere('description', 'LIKE', '%' . $searchTerm . '%');
+                    });
+                }
+                $featuredBusinesses = $featuredBusinessesQuery->orderBy('business_name')->get();
 
-        // Get all businesses for statistics (before filtering)
-        $allBusinesses = Business::all();
+                // Get approved businesses for display
+                $businessesQuery = Business::approved();
+                if ($searchTerm) {
+                    $businessesQuery->where(function($query) use ($searchTerm) {
+                        $query->where('business_name', 'LIKE', '%' . $searchTerm . '%')
+                              ->orWhere('description', 'LIKE', '%' . $searchTerm . '%');
+                    });
+                }
+                $businesses = $businessesQuery->orderedForListing()->get();
 
-        // Get featured businesses for the featured section (also apply search if provided)
-        $featuredBusinessesQuery = Business::approved()->where('is_featured', true);
-        if ($searchTerm) {
-            $featuredBusinessesQuery->where(function($query) use ($searchTerm) {
-                $query->where('business_name', 'LIKE', '%' . $searchTerm . '%')
-                      ->orWhere('description', 'LIKE', '%' . $searchTerm . '%');
+                return [
+                    'allBusinesses' => $allBusinesses,
+                    'featuredBusinesses' => $featuredBusinesses,
+                    'businesses' => $businesses,
+                ];
             });
-        }
-        $featuredBusinesses = $featuredBusinessesQuery->orderBy('business_name')->get();
 
-        // Get approved businesses for display
-        $businessesQuery = Business::approved();
-        if ($searchTerm) {
-            $businessesQuery->where(function($query) use ($searchTerm) {
-                $query->where('business_name', 'LIKE', '%' . $searchTerm . '%')
-                      ->orWhere('description', 'LIKE', '%' . $searchTerm . '%');
-            });
-        }
-        $businesses = $businessesQuery->orderedForListing()->get();
+            $allBusinesses = $result['allBusinesses'];
+            $featuredBusinesses = $result['featuredBusinesses'];
+            $businesses = $result['businesses'];
 
-        $dbSpan?->setData([
-            'total_businesses' => $allBusinesses->count(),
-            'approved_businesses' => $businesses->count(),
-            'search_term' => $searchTerm,
-            'has_search' => !empty($searchTerm)
-        ]);
-        $dbSpan?->finish();
+            $responseTime = (microtime(true) - $startTime) * 1000;
 
-        $responseTime = (microtime(true) - $startTime) * 1000;
-
-        // Set transaction data
-        $transaction?->setData([
-            'total_businesses' => $allBusinesses->count(),
-            'displayed_businesses' => $businesses->count(),
-            'response_time_ms' => round($responseTime, 2),
-            'is_empty' => $businesses->isEmpty(),
-            'search_term' => $searchTerm,
-            'has_search' => !empty($searchTerm)
-        ]);
-
-        // Create span for business logic
-        $logicSpan = BusinessLogger::createBusinessSpan('statistics_calculation', [
-            'businesses_count' => $businesses->count(),
-            'search_term' => $searchTerm,
-        ]);
-
-        // Log the listing view with comprehensive statistics
-        if ($businesses->isEmpty()) {
-            $emptyReason = $searchTerm ? 'no_search_results' : 'no_approved_businesses';
-            BusinessLogger::emptyStateShown($emptyReason);
-            $transaction?->setData(['empty_state' => 'shown', 'empty_reason' => $emptyReason]);
-        } else {
+            // Log listing viewed
             BusinessLogger::listingViewed($allBusinesses, $responseTime);
-        }
 
-        $logicSpan?->finish();
+            // Log search if performed
+            if ($searchTerm) {
+                BusinessLogger::businessSearched([
+                    'search_term' => $searchTerm,
+                    'search_type' => 'business_name_or_description',
+                ], $businesses->count(), $responseTime);
+            }
 
-        // Log performance if it's slow
-        if ($responseTime > 500) {
-            BusinessLogger::slowQuery('business_listing', $responseTime);
-            $transaction?->setData(['performance_issue' => 'slow_response']);
-        }
+            // Check if we should show empty state
+            if ($businesses->isEmpty() && $allBusinesses->isEmpty()) {
+                BusinessLogger::emptyStateShown('no_businesses_at_all');
+            } elseif ($businesses->isEmpty() && $allBusinesses->isNotEmpty()) {
+                BusinessLogger::emptyStateShown($searchTerm ? 'no_search_results' : 'no_approved_businesses');
+            }
 
-        // Log performance metric
-        BusinessLogger::performanceMetric('business_listing_load', $responseTime, [
-            'total_businesses' => $allBusinesses->count(),
-            'displayed_businesses' => $businesses->count(),
-        ]);
+            // Calculate statistics for view
+            $statistics = [
+                'total' => $allBusinesses->count(),
+                'approved' => $allBusinesses->where('status', 'approved')->count(),
+                'pending' => $allBusinesses->where('status', 'pending')->count(),
+                'featured' => $featuredBusinesses->count(),
+                'verified' => $allBusinesses->where('is_verified', true)->count(),
+            ];
 
-        $transaction?->finish();
-        return view('businesses.index', compact('businesses', 'featuredBusinesses', 'searchTerm'));
-    }
+            // Industry distribution
+            $industryDistribution = $allBusinesses->groupBy('industry')->map->count();
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
+            // Business type distribution
+            $typeDistribution = $allBusinesses->groupBy('business_type')->map->count();
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
+            // Location distribution
+            $locationDistribution = $allBusinesses->groupBy(function ($business) {
+                return $business->city . ', ' . $business->state_province;
+            })->map->count();
+
+            // Performance metrics
+            if ($responseTime > 1000) {
+                BusinessLogger::slowQuery('business_listing', $responseTime, 'Multiple queries for business listing page');
+            }
+
+            return response()->view('businesses.index', compact(
+                'businesses',
+                'featuredBusinesses',
+                'statistics',
+                'industryDistribution',
+                'typeDistribution',
+                'locationDistribution',
+                'searchTerm'
+            ));
+        });
     }
 
     /**
@@ -134,89 +133,69 @@ class BusinessController extends Controller
      */
     public function show(Business $business)
     {
-        $startTime = microtime(true);
-
-        // Start custom transaction for business detail view
-        $transaction = BusinessLogger::startBusinessTransaction('business_detail', [
+        // Use modern Sentry pattern for tracking business detail view
+        return SentryLogger::trackBusinessOperation('business_detail', [
             'business_id' => $business->id,
             'business_slug' => $business->business_slug,
-        ]);
+        ], function ($span) use ($business) {
+            $startTime = microtime(true);
 
-        // Log business detail access attempt
-        BusinessLogger::userInteraction('business_detail_access_attempt', [
-            'business_id' => $business->id,
-            'business_slug' => $business->business_slug,
-            'business_name' => $business->business_name,
-            'business_status' => $business->status,
-            'request_url' => request()->url(),
-            'user_ip' => request()->ip(),
-        ]);
-
-        // Only show approved businesses to the public
-        if ($business->status !== 'approved') {
-            BusinessLogger::userInteraction('business_detail_access_denied', [
+            // Log business detail access attempt
+            BusinessLogger::userInteraction('business_detail_access_attempt', [
                 'business_id' => $business->id,
                 'business_slug' => $business->business_slug,
+                'business_name' => $business->business_name,
                 'business_status' => $business->status,
-                'reason' => 'not_approved',
+                'request_url' => request()->url(),
+                'user_ip' => request()->ip(),
             ]);
-            abort(404);
-        }
 
-        // Create span for business logic
-        $logicSpan = BusinessLogger::createBusinessSpan('business_detail_view', [
-            'business_id' => $business->id,
-            'business_name' => $business->business_name,
-            'industry' => $business->industry,
-        ]);
+            // Only show approved businesses to the public
+            if ($business->status !== 'approved') {
+                BusinessLogger::userInteraction('business_detail_access_denied', [
+                    'business_id' => $business->id,
+                    'business_slug' => $business->business_slug,
+                    'business_status' => $business->status,
+                    'reason' => 'business_not_approved',
+                ]);
 
-        $responseTime = (microtime(true) - $startTime) * 1000;
+                abort(404);
+            }
 
-        // Set transaction data
-        $transaction?->setData([
-            'business_id' => $business->id,
-            'business_name' => $business->business_name,
-            'industry' => $business->industry,
-            'is_featured' => $business->is_featured,
-            'is_verified' => $business->is_verified,
-            'response_time_ms' => round($responseTime, 2),
-        ]);
+            // Track related businesses query
+            $relatedBusinesses = SentryLogger::trackDatabaseOperation('related_businesses_query', function ($dbSpan) use ($business) {
+                return Business::approved()
+                    ->where('id', '!=', $business->id)
+                    ->where(function ($query) use ($business) {
+                        $query->where('industry', $business->industry)
+                              ->orWhere('business_type', $business->business_type);
+                    })
+                    ->take(4)
+                    ->get();
+            });
 
-        // Log business detail view
-        BusinessLogger::userInteraction('business_detail_viewed', [
-            'business_id' => $business->id,
-            'business_name' => $business->business_name,
-            'business_slug' => $business->business_slug,
-            'industry' => $business->industry,
-        ]);
+            $responseTime = (microtime(true) - $startTime) * 1000;
 
-        $logicSpan?->finish();
-        $transaction?->finish();
+            // Log successful business detail view
+            BusinessLogger::userInteraction('business_detail_viewed', [
+                'business_id' => $business->id,
+                'business_slug' => $business->business_slug,
+                'business_name' => $business->business_name,
+                'industry' => $business->industry,
+                'business_type' => $business->business_type,
+                'is_featured' => $business->is_featured,
+                'is_verified' => $business->is_verified,
+                'response_time_ms' => $responseTime,
+                'related_businesses_count' => $relatedBusinesses->count(),
+            ]);
 
-        return view('businesses.show', compact('business'));
-    }
+            // Performance tracking
+            BusinessLogger::performanceMetric('business_detail_page', $responseTime, [
+                'business_id' => $business->id,
+                'related_count' => $relatedBusinesses->count(),
+            ]);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Business $business)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Business $business)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Business $business)
-    {
-        //
+            return response()->view('businesses.show', compact('business', 'relatedBusinesses'));
+        });
     }
 }

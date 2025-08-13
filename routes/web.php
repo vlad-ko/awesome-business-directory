@@ -7,33 +7,28 @@ use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 
 Route::get('/', function (Illuminate\Http\Request $request) {
-    $startTime = microtime(true);
-    
-    // Start Sentry transaction for welcome page
-    $transaction = \App\Services\BusinessLogger::startBusinessTransaction('welcome_page_view', [
+    // Use modern Sentry pattern for welcome page
+    return \App\Services\SentryLogger::trackBusinessOperation('welcome_page_view', [
         'referrer' => $request->header('referer'),
         'user_agent' => $request->userAgent(),
-    ]);
-    
-    // Log welcome page view
-    \App\Services\BusinessLogger::welcomePageViewed($request, null);
-    
-    // Render the view
-    $response = response()->view('welcome');
-    
-    // Calculate response time and log performance
-    $responseTime = (microtime(true) - $startTime) * 1000;
-    \App\Services\BusinessLogger::performanceMetric('welcome_page_render', $responseTime, [
-        'view' => 'welcome',
-        'has_referrer' => !empty($request->header('referer')),
-    ]);
-    
-    // Finish transaction
-    if ($transaction) {
-        $transaction->finish();
-    }
-    
-    return $response;
+    ], function ($span) use ($request) {
+        $startTime = microtime(true);
+        
+        // Log welcome page view
+        \App\Services\BusinessLogger::welcomePageViewed($request, null);
+        
+        // Render the view
+        $response = response()->view('welcome');
+        
+        // Calculate response time and log performance
+        $responseTime = (microtime(true) - $startTime) * 1000;
+        \App\Services\BusinessLogger::performanceMetric('welcome_page_render', $responseTime, [
+            'view' => 'welcome',
+            'has_referrer' => !empty($request->header('referer')),
+        ]);
+        
+        return $response;
+    });
 })->name('welcome');
 
 Route::get('/onboard', [BusinessOnboardingController::class, 'create'])->name('business.onboard');

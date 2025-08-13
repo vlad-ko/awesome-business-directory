@@ -4,154 +4,192 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Business;
+use App\Services\BusinessLogger;
+use App\Services\SentryLogger;
 use Illuminate\Http\Request;
 
 class AdminDashboardController extends Controller
 {
-    /**
-     * Display the admin dashboard with pending businesses.
-     */
     public function index()
     {
-        $startTime = microtime(true);
-
-        // Start custom transaction for admin dashboard
-        $transaction = \App\Services\BusinessLogger::startBusinessTransaction('admin_dashboard', [
+        // Use modern Sentry pattern for tracking admin dashboard
+        return SentryLogger::trackBusinessOperation('admin_dashboard', [
             'admin_user' => auth()->user()->name,
-        ]);
+        ], function ($span) {
+            $startTime = microtime(true);
 
-        // Create span for database queries
-        $dbSpan = \App\Services\BusinessLogger::createDatabaseSpan('admin_queries', 'Fetching admin dashboard data');
+            // Track database operations for admin dashboard
+            $result = SentryLogger::trackDatabaseOperation('admin_queries', function ($dbSpan) {
+                $pendingBusinesses = Business::where('status', 'pending')
+                    ->orderBy('created_at', 'desc')
+                    ->get();
 
-        $pendingBusinesses = Business::where('status', 'pending')
-            ->orderBy('created_at', 'desc')
-            ->get();
+                $statistics = [
+                    'pending' => Business::where('status', 'pending')->count(),
+                    'approved' => Business::where('status', 'approved')->count(),
+                    'rejected' => Business::where('status', 'rejected')->count(),
+                    'total' => Business::count(),
+                ];
 
-        $statistics = [
-            'pending' => Business::where('status', 'pending')->count(),
-            'approved' => Business::where('status', 'approved')->count(),
-            'rejected' => Business::where('status', 'rejected')->count(),
-            'total' => Business::count(),
-        ];
+                return [
+                    'pendingBusinesses' => $pendingBusinesses,
+                    'statistics' => $statistics,
+                ];
+            });
 
-        $dbSpan?->setData([
-            'pending_count' => $statistics['pending'],
-            'total_count' => $statistics['total']
-        ]);
-        $dbSpan?->finish();
+            $pendingBusinesses = $result['pendingBusinesses'];
+            $statistics = $result['statistics'];
+            
+            $responseTime = (microtime(true) - $startTime) * 1000;
 
-        $responseTime = (microtime(true) - $startTime) * 1000;
+            // Log admin dashboard metrics
+            BusinessLogger::userInteraction('admin_dashboard_viewed', [
+                'admin_user' => auth()->user()->name,
+                'pending_count' => $statistics['pending'],
+                'total_count' => $statistics['total'],
+                'response_time_ms' => $responseTime,
+                'admin_workload' => $statistics['pending'] > 10 ? 'high' : 'normal',
+            ]);
 
-        // Set transaction data
-        $transaction?->setData([
-            'pending_businesses' => $statistics['pending'],
-            'total_businesses' => $statistics['total'],
-            'response_time_ms' => round($responseTime, 2),
-            'admin_workload' => $statistics['pending'] > 10 ? 'high' : 'normal'
-        ]);
-
-        $transaction?->finish();
-        return view('admin.dashboard', compact('pendingBusinesses', 'statistics'));
+            return view('admin.dashboard', compact('pendingBusinesses', 'statistics'));
+        });
     }
 
-    /**
-     * Display the specified business for review.
-     */
     public function show(Business $business)
     {
-        return view('admin.businesses.show', compact('business'));
-    }
-
-    /**
-     * Approve a pending business.
-     */
-    public function approve(Business $business)
-    {
-        // Start custom transaction for business approval
-        $transaction = \App\Services\BusinessLogger::startBusinessTransaction('approve_business', [
+        // Use modern Sentry pattern for tracking admin business view
+        return SentryLogger::trackBusinessOperation('admin_business_detail', [
             'business_id' => $business->id,
             'admin_user' => auth()->user()->name,
-        ]);
-
-        if ($business->status !== 'pending') {
-            $transaction?->setData([
-                'status' => 'error',
-                'error_reason' => 'not_pending'
+        ], function ($span) use ($business) {
+            // Log admin viewing business details
+            BusinessLogger::userInteraction('admin_business_detail_viewed', [
+                'business_id' => $business->id,
+                'business_name' => $business->business_name,
+                'business_status' => $business->status,
+                'admin_user' => auth()->user()->name,
             ]);
-            $transaction?->finish();
-            return redirect()->route('admin.dashboard')
-                ->with('error', 'Business is not pending approval.');
-        }
 
-        // Create span for database update
-        $dbSpan = \App\Services\BusinessLogger::createDatabaseSpan('business_approval', 'Updating business status to approved');
-
-        $business->update(['status' => 'approved']);
-
-        $dbSpan?->finish();
-
-        $transaction?->setData([
-            'status' => 'success',
-            'business_name' => $business->business_name,
-            'business_industry' => $business->industry
-        ]);
-        $transaction?->finish();
-
-        return redirect()->route('admin.dashboard')
-            ->with('success', 'Business approved successfully!');
+            return view('admin.businesses.show', compact('business'));
+        });
     }
 
-    /**
-     * Reject a pending business.
-     */
-    public function reject(Request $request, Business $business)
+    public function approve(Business $business)
     {
-        if ($business->status !== 'pending') {
-            return redirect()->route('admin.dashboard')
-                ->with('error', 'Business is not pending approval.');
-        }
+        // Use modern Sentry pattern for tracking business approval
+        return SentryLogger::trackBusinessOperation('admin_business_approve', [
+            'business_id' => $business->id,
+            'admin_user' => auth()->user()->name,
+        ], function ($span) use ($business) {
+            $startTime = microtime(true);
 
-        $request->validate([
-            'rejection_reason' => 'required|string|max:500',
-        ]);
+            try {
+                $business->update(['status' => 'approved']);
 
-        $business->update([
-            'status' => 'rejected',
-            // Note: In a real app, you might want to add a rejection_reason field to the businesses table
-        ]);
+                $processingTime = (microtime(true) - $startTime) * 1000;
 
-        return redirect()->route('admin.dashboard')
-            ->with('success', 'Business rejected successfully!');
+                // Log successful approval
+                BusinessLogger::userInteraction('admin_business_approved', [
+                    'business_id' => $business->id,
+                    'business_name' => $business->business_name,
+                    'admin_user' => auth()->user()->name,
+                    'processing_time_ms' => $processingTime,
+                ]);
+
+                return redirect()->route('admin.dashboard')
+                    ->with('success', 'Business approved successfully!');
+
+            } catch (\Exception $e) {
+                // Capture exception with context
+                \Sentry\captureException($e, [
+                    'tags' => [
+                        'component' => 'admin_dashboard',
+                        'action' => 'business_approval',
+                    ],
+                    'extra' => [
+                        'business_id' => $business->id,
+                        'admin_user' => auth()->user()->name,
+                    ],
+                ]);
+
+                BusinessLogger::applicationError($e, 'admin_business_approval_failed', [
+                    'business_id' => $business->id,
+                ]);
+
+                return redirect()->back()
+                    ->with('error', 'Failed to approve business. Please try again.');
+            }
+        });
     }
 
-    /**
-     * Toggle the featured status of a business.
-     */
+    public function reject(Business $business)
+    {
+        // Use modern Sentry pattern for tracking business rejection
+        return SentryLogger::trackBusinessOperation('admin_business_reject', [
+            'business_id' => $business->id,
+            'admin_user' => auth()->user()->name,
+        ], function ($span) use ($business) {
+            $business->update(['status' => 'rejected']);
+
+            // Log rejection
+            BusinessLogger::userInteraction('admin_business_rejected', [
+                'business_id' => $business->id,
+                'business_name' => $business->business_name,
+                'admin_user' => auth()->user()->name,
+            ]);
+
+            return redirect()->route('admin.dashboard')
+                ->with('success', 'Business rejected successfully!');
+        });
+    }
+
     public function toggleFeatured(Business $business)
     {
-        $business->update([
-            'is_featured' => !$business->is_featured,
-        ]);
+        // Use modern Sentry pattern for tracking featured toggle
+        return SentryLogger::trackBusinessOperation('admin_toggle_featured', [
+            'business_id' => $business->id,
+            'admin_user' => auth()->user()->name,
+        ], function ($span) use ($business) {
+            $business->update(['is_featured' => !$business->is_featured]);
 
-        $status = $business->is_featured ? 'featured' : 'unfeatured';
-        
-        return redirect()->back()
-            ->with('success', 'Featured status updated successfully!');
+            $action = $business->is_featured ? 'featured' : 'unfeatured';
+
+            // Log feature toggle
+            BusinessLogger::userInteraction('admin_business_feature_toggled', [
+                'business_id' => $business->id,
+                'business_name' => $business->business_name,
+                'admin_user' => auth()->user()->name,
+                'action' => $action,
+                'is_featured' => $business->is_featured,
+            ]);
+
+            return redirect()->back()
+                ->with('success', "Business {$action} successfully!");
+        });
     }
 
-    /**
-     * Toggle the verified status of a business.
-     */
     public function toggleVerified(Business $business)
     {
-        $isVerified = !$business->is_verified;
-        
-        $business->update([
-            'is_verified' => $isVerified,
-            'verified_at' => $isVerified ? now() : null,
-        ]);
+        // Use modern Sentry pattern for tracking verification toggle
+        return SentryLogger::trackBusinessOperation('admin_toggle_verified', [
+            'business_id' => $business->id,
+            'admin_user' => auth()->user()->name,
+        ], function ($span) use ($business) {
+            $business->update(['is_verified' => !$business->is_verified]);
 
-        return redirect()->back()
-            ->with('success', 'Verified status updated successfully!');
+            $action = $business->is_verified ? 'verified' : 'unverified';
+
+            // Log verification toggle
+            BusinessLogger::userInteraction('admin_business_verification_toggled', [
+                'business_id' => $business->id,
+                'business_name' => $business->business_name,
+                'admin_user' => auth()->user()->name,
+                'action' => $action,
+                'is_verified' => $business->is_verified,
+            ]);
+
+            return redirect()->back()
+                ->with('success', "Business {$action} successfully!");
+        });
     }
 }
