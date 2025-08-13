@@ -12,21 +12,32 @@ This application provides a complete business directory platform where companies
 - **Enjoy modern UI/UX** with responsive design and professional styling
 
 ### ✨ Key Features
+
+#### 🚨 Application Performance Monitoring (Sentry.io)
+- ✅ **Full-Stack Observability** - Frontend to backend distributed tracing
+- ✅ **Session Replay** - Debug issues by watching user sessions
+- ✅ **Core Web Vitals** - Monitor LCP, FID, CLS performance metrics
+- ✅ **Error Tracking** - Automatic exception capture with context
+- ✅ **Performance Monitoring** - Track slow queries and bottlenecks
+- ✅ **User Journey Analytics** - Breadcrumbs for every interaction
+
+#### 💼 Business Features
 - ✅ **Multi-Step Business Onboarding** - User-friendly 4-step form with progress tracking
 - ✅ **Progressive Form UX** - Reduces cognitive load with session-based step management
-- ✅ **Comprehensive Analytics Logging** - **NEW** - Complete user experience tracking with Sentry
-- ✅ **Funnel Analysis & Metrics** - **NEW** - Step-by-step conversion tracking and timing
 - ✅ **Business Directory** - Professional listing with featured/verified badges
 - ✅ **Individual Business Pages** - Detailed profiles with slug-based SEO-friendly URLs
+- ✅ **Rich Business Data** - 35+ fields including hours, services, social media
+
+#### 👨‍💼 Admin Features
 - ✅ **Admin Authentication** - Secure role-based access control system
 - ✅ **Business Approval Workflow** - Complete admin management of pending businesses
 - ✅ **Status Management** - Pending/Approved/Rejected/Suspended workflow
 - ✅ **Featured & Verified System** - Premium placement and trust indicators
+
+#### 🛠️ Technical Excellence
+- ✅ **Comprehensive Testing** - Full TDD coverage with 160+ tests
 - ✅ **Empty State Handling** - Engaging call-to-action when no businesses exist
 - ✅ **Responsive Design** - Mobile-first approach with Tailwind CSS
-- ✅ **Comprehensive Testing** - Full TDD coverage with 111 tests (437 assertions)
-- ✅ **Advanced Monitoring** - Sentry.io integration with custom performance tracking
-- ✅ **Rich Business Data** - 35+ fields including hours, services, social media
 - ✅ **Backward Compatibility** - Legacy routes automatically redirect to new flow
 
 ### 🔧 Technical Stack
@@ -34,10 +45,126 @@ This application provides a complete business directory platform where companies
 - **Docker Development** via Laravel Sail
 - **MySQL Database** with comprehensive business schema
 - **Tailwind CSS** for responsive, modern UI
-- **Sentry.io Integration** with 100% tracing for development
-- **Structured Logging** with BusinessLogger service
-- **Multi-Step Analytics** with comprehensive user experience tracking **NEW**
-- **Custom Performance Monitoring** with transaction traces and spans
+- **Sentry.io Integration** with comprehensive monitoring (see below)
+- **Alpine.js** for reactive frontend components
+- **Vite** for modern asset bundling
+
+## 🚨 Sentry Integration - Application Performance Monitoring
+
+This application features a comprehensive Sentry integration following the latest best practices from the [Sentry Laravel SDK](https://github.com/getsentry/sentry-laravel).
+
+### 🎯 Key Features
+
+#### Backend Integration
+- **Modern Sentry Patterns**: Uses `Sentry::startSpan()` callback pattern for clean span management
+- **Centralized Service**: `SentryLogger` service encapsulates all Sentry operations
+- **Automatic Context**: `SentryContextMiddleware` sets user context and request data
+- **Structured Logging**: Native Sentry logger with proper log levels
+- **Database Monitoring**: Automatic slow query detection and warnings
+- **Business Operations**: Comprehensive tracking of all business logic
+
+#### Frontend Integration
+- **Session Replay**: Full session recording for debugging user issues
+- **Core Web Vitals**: LCP, FID, CLS, and other performance metrics
+- **Distributed Tracing**: Frontend-to-backend trace continuity
+- **Error Boundaries**: Graceful error handling with context
+- **User Journey Tracking**: Breadcrumbs for every user interaction
+- **Performance Monitoring**: Page loads, AJAX requests, and form interactions
+
+### 📊 What's Tracked
+
+1. **User Experience**
+   - Page views and navigation
+   - Form interactions and progression
+   - Business card clicks and searches
+   - Multi-step onboarding flow
+   - Admin actions and approvals
+
+2. **Performance Metrics**
+   - Page load times
+   - Database query performance
+   - API response times
+   - Frontend rendering metrics
+   - Resource loading times
+
+3. **Errors & Issues**
+   - Unhandled exceptions with full stack traces
+   - Validation errors with context
+   - Failed API requests
+   - JavaScript errors
+   - Network issues
+
+### 🔧 Configuration
+
+```env
+# .env configuration
+SENTRY_LARAVEL_DSN=your-dsn-here
+SENTRY_TRACES_SAMPLE_RATE=1.0  # 100% in development, reduce in production
+SENTRY_PROFILES_SAMPLE_RATE=1.0  # Profiling rate
+SENTRY_ENABLE_TRACING=true
+SENTRY_ENABLE_LOGS=true
+```
+
+### 📝 Usage Examples
+
+```php
+// Backend - Using SentryLogger
+use App\Services\SentryLogger;
+
+// Track business operations
+SentryLogger::trackBusinessOperation('create_business', [
+    'industry' => $business->industry,
+    'has_logo' => !empty($business->logo_path),
+], function ($span) use ($business) {
+    // Your business logic here
+    $business->save();
+    return $business;
+});
+
+// Track database operations
+SentryLogger::trackDatabaseOperation('complex_query', function ($span) {
+    return Business::approved()
+        ->orderedForListing()
+        ->with('services')
+        ->get();
+});
+
+// Structured logging
+SentryLogger::log('info', 'Business approved', [
+    'business_id' => $business->id,
+    'admin_id' => auth()->id(),
+]);
+```
+
+```javascript
+// Frontend - Using enhanced tracking
+import { BusinessDirectoryTracking } from './sentry';
+
+// Track user interactions
+BusinessDirectoryTracking.trackBusinessCardClick(businessId, businessName);
+
+// Track form progression
+BusinessDirectoryTracking.trackFormProgression('step_completed', 2, {
+    fields_filled: 5,
+    time_on_step: 45
+});
+```
+
+### 🔍 Debugging with Sentry
+
+1. **Spotlight Integration**: Local debugging with Sentry Spotlight (enabled in development)
+2. **Trace View**: See complete request flow from frontend to database
+3. **Session Replay**: Watch exactly what users did before an error
+4. **Performance Insights**: Identify slow queries and bottlenecks
+5. **Error Grouping**: Similar errors are automatically grouped
+
+### 📚 Documentation
+
+For more details, see:
+- [Full Sentry Integration Guide](docs/SENTRY_COMPLETE_INTEGRATION_GUIDE.md)
+- [Migration Checklist](docs/SENTRY_MIGRATION_CHECKLIST.md)
+- [Best Practices](docs/SENTRY_BEST_PRACTICES.md)
+- [Development Guide](docs/DEVELOPMENT.md)
 
 ## 🧪 Development Approach: Test-Driven Development (TDD)
 

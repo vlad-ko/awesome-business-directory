@@ -1,6 +1,17 @@
 # Sentry Best Practices for Laravel
 
-This guide shows how to use Sentry following the latest official SDK patterns.
+This guide shows how to use Sentry following the latest official SDK patterns after our comprehensive migration.
+
+## 🚀 Migration Summary
+
+We've successfully migrated our entire Sentry integration to follow modern patterns:
+
+- ✅ **Backend**: All controllers now use `SentryLogger` service with callback patterns
+- ✅ **Frontend**: Enhanced with Session Replay, Core Web Vitals, and modern tracking
+- ✅ **Middleware**: Automatic context and distributed tracing via `SentryContextMiddleware`
+- ✅ **Testing**: Full TDD coverage with 36+ new tests
+
+For detailed migration information, see [SENTRY_MIGRATION_SUMMARY.md](../SENTRY_MIGRATION_SUMMARY.md).
 
 ## Backend (Laravel) Best Practices
 
