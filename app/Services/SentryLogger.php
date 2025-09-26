@@ -80,12 +80,10 @@ class SentryLogger
                 });
             }
             
-            // Set data if provided
+            // Set data as span attributes if provided
             if (isset($spanData['data'])) {
-                foreach ($spanData['data'] as $key => $value) {
-                    if (method_exists($span, 'setData')) {
-                        $span->setData([$key => $value]);
-                    }
+                if (method_exists($span, 'setData')) {
+                    $span->setData($spanData['data']);
                 }
             }
             
@@ -187,8 +185,15 @@ class SentryLogger
     {
         configureScope(function (\Sentry\State\Scope $scope) use ($tags) {
             foreach ($tags as $key => $value) {
-                $scope->setTag($key, $value);
+                // Ensure value is a string to avoid "(no value)" in Sentry
+                $scope->setTag($key, (string) $value);
             }
         });
+        
+        // Also try to set tags on current transaction if available
+        $transaction = \Sentry\SentrySdk::getCurrentHub()->getTransaction();
+        if ($transaction && method_exists($transaction, 'setData')) {
+            $transaction->setData($tags);
+        }
     }
 }

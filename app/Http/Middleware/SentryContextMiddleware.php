@@ -19,10 +19,7 @@ class SentryContextMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         // Start a span for the entire request
-        return SentryLogger::startSpan([
-            'op' => 'http.server',
-            'name' => $this->getTransactionName($request),
-        ], function ($span) use ($request, $next) {
+        return SentryLogger::trace(function ($span) use ($request, $next) {
             // Set request attributes
             if (method_exists($span, 'setData')) {
                 $span->setData([
@@ -91,7 +88,10 @@ class SentryContextMiddleware
                 $span->setStatus(\Sentry\Tracing\SpanStatus::internalError());
                 throw $e;
             }
-        });
+        }, [
+            'op' => 'http.server',
+            'name' => $this->getTransactionName($request),
+        ]);
     }
     
     /**

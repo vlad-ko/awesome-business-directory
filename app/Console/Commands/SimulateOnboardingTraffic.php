@@ -99,15 +99,31 @@ class SimulateOnboardingTraffic extends Command
     {
         // Start onboarding journey
         $stats['started']++;
+        $userId = $faker->uuid;
         
-        // Use SentryLogger to create a transaction for this simulation
-        SentryLogger::trackBusinessOperation('simulated_onboarding', [
-            'simulation' => true,
-            'user_id' => $faker->uuid,
-        ], function ($span) use ($faker, $baseDropRate, $errorRate, &$stats) {
+        // Create a proper transaction context for CLI
+        $transactionContext = new \Sentry\Tracing\TransactionContext();
+        $transactionContext->setName('onboarding.simulation');
+        $transactionContext->setOp('business.onboarding');
+        
+        $transaction = \Sentry\startTransaction($transactionContext);
+        \Sentry\SentrySdk::getCurrentHub()->setSpan($transaction);
+        
+        try {
+            // Set simulation tags
+            \Sentry\configureScope(function (\Sentry\State\Scope $scope) use ($userId) {
+                $scope->setTag('test.simulation', 'onboarding');
+                $scope->setTag('user.id', $userId);
+            });
             
-            // Track onboarding start
-            CriticalExperienceTracker::trackOnboardingStart();
+            // Track onboarding start with child span
+            SentryLogger::trace(function ($startSpan) {
+                CriticalExperienceTracker::trackOnboardingStart();
+            }, [
+                'op' => 'critical.onboarding.start',
+                'name' => 'Onboarding Started',
+                'data' => ['critical.checkpoint' => 'start'],
+            ]);
             
             // Simulate step progression
             for ($step = 1; $step <= 4; $step++) {
@@ -135,9 +151,18 @@ class SimulateOnboardingTraffic extends Command
                 // Simulate form filling time
                 usleep(rand(2000000, 5000000)); // 2-5 seconds per step
                 
-                // Complete the step
-                $this->simulateStepData($step, $faker);
-                CriticalExperienceTracker::trackOnboardingStepComplete($step);
+                // Complete the step with child span
+                SentryLogger::trace(function ($stepSpan) use ($step, $faker) {
+                    $this->simulateStepData($step, $faker);
+                    CriticalExperienceTracker::trackOnboardingStepComplete($step);
+                }, [
+                    'op' => "critical.onboarding.step_{$step}",
+                    'name' => "Onboarding Step {$step} Complete",
+                    'data' => [
+                        'critical.checkpoint' => "step_{$step}_complete",
+                        'onboarding.step' => $step,
+                    ],
+                ]);
                 $stats["step_{$step}_completed"]++;
                 
                 // Add inter-step delay
@@ -150,7 +175,11 @@ class SimulateOnboardingTraffic extends Command
             $business = $this->createSimulatedBusiness($faker);
             CriticalExperienceTracker::trackOnboardingComplete($business);
             $stats['completed']++;
-        });
+            
+        } finally {
+            // Always finish the transaction
+            $transaction->finish();
+        }
     }
 
     /**

@@ -88,19 +88,36 @@ class SimulateDiscoveryTraffic extends Command
         $stats['visitors']++;
         $userId = $faker->uuid;
         
-        // Use SentryLogger to create a transaction for this simulation
-        SentryLogger::trackBusinessOperation('simulated_discovery', [
-            'simulation' => true,
-            'user_id' => $userId,
-        ], function ($span) use ($faker, $businesses, $viewRate, $contactRate, &$stats, $userId) {
+        // Create a proper transaction context for CLI
+        $transactionContext = new \Sentry\Tracing\TransactionContext();
+        $transactionContext->setName('discovery.simulation');
+        $transactionContext->setOp('business.discovery');
+        
+        $transaction = \Sentry\startTransaction($transactionContext);
+        \Sentry\SentrySdk::getCurrentHub()->setSpan($transaction);
+        
+        try {
+            
+            // Set initial tags on the transaction
+            \Sentry\configureScope(function (\Sentry\State\Scope $scope) {
+                $scope->setTag('test.simulation', 'discovery');
+                $scope->setTag('test.type', 'automated');
+                $scope->setTag('source', 'simulation');
+            });
             
             // Not everyone starts browsing
             if (!$this->shouldPerformAction(0.8)) { // 80% actually browse
                 return;
             }
             
-            // Track discovery start
-            CriticalExperienceTracker::trackDiscoveryStart();
+            // Track discovery start with child span
+            SentryLogger::trace(function ($startSpan) {
+                CriticalExperienceTracker::trackDiscoveryStart();
+            }, [
+                'op' => 'critical.discovery.start',
+                'name' => 'Discovery Journey Started',
+                'data' => ['critical.checkpoint' => 'start'],
+            ]);
             $stats['discovery_started']++;
             
             // Simulate browsing time
@@ -121,8 +138,20 @@ class SimulateDiscoveryTraffic extends Command
                 // Pick a business (popular ones more likely)
                 $business = $this->selectBusinessWithBias($businesses);
                 
-                // Track business view
-                CriticalExperienceTracker::trackBusinessViewed($business);
+                // Track business view with child span
+                SentryLogger::trace(function ($viewSpan) use ($business) {
+                    CriticalExperienceTracker::trackBusinessViewed($business);
+                }, [
+                    'op' => 'critical.discovery.view',
+                    'name' => "Business View: {$business->business_name}",
+                    'data' => [
+                        'critical.checkpoint' => 'business_view',
+                        'business.id' => $business->id,
+                        'business.name' => $business->business_name,
+                        'business.featured' => $business->is_featured,
+                        'business.verified' => $business->is_verified,
+                    ],
+                ]);
                 $stats['businesses_viewed']++;
                 
                 // Track popularity
@@ -137,8 +166,19 @@ class SimulateDiscoveryTraffic extends Command
                 if ($this->shouldPerformAction($contactRate)) {
                     $method = $faker->randomElement(self::CONTACT_METHODS);
                     
-                    // Track conversion
-                    CriticalExperienceTracker::trackBusinessContact($business, $method);
+                    // Track conversion with child span
+                    SentryLogger::trace(function ($conversionSpan) use ($business, $method) {
+                        CriticalExperienceTracker::trackBusinessContact($business, $method);
+                    }, [
+                        'op' => 'critical.discovery.conversion',
+                        'name' => "Business Contact: {$method}",
+                        'data' => [
+                            'critical.checkpoint' => 'conversion',
+                            'business.id' => $business->id,
+                            'contact.method' => $method,
+                            'conversion.type' => 'business_contact',
+                        ],
+                    ]);
                     $stats['contacts_made']++;
                     
                     // Usually contact only one business
@@ -152,7 +192,11 @@ class SimulateDiscoveryTraffic extends Command
                     usleep(rand(500000, 1500000)); // 0.5-1.5 seconds
                 }
             }
-        });
+            
+        } finally {
+            // Always finish the transaction
+            $transaction->finish();
+        }
     }
 
     /**

@@ -71,7 +71,20 @@ class CriticalExperienceTracker
             'info'
         );
         
-        // Set tags on current transaction/span
+        // Set span attributes directly on current span
+        $span = \Sentry\SentrySdk::getCurrentHub()->getSpan();
+        if ($span && method_exists($span, 'setData')) {
+            $span->setData([
+                'critical.checkpoint' => 'business_view',
+                'critical.business_type' => $business->is_featured ? 'featured' : 'regular',
+                'business.id' => $business->id,
+                'business.name' => $business->business_name,
+                'business.featured' => $business->is_featured,
+                'business.verified' => $business->is_verified,
+            ]);
+        }
+        
+        // Still set tags on scope for filtering
         SentryLogger::setTags([
             'critical.checkpoint' => 'business_view',
             'critical.business_type' => $business->is_featured ? 'featured' : 'regular',
@@ -291,25 +304,23 @@ class CriticalExperienceTracker
      * These errors prevent users from completing critical paths
      */
     public static function trackCriticalError(
-        string $experience, 
-        string $checkpoint, 
+        string $experience,
+        string $checkpoint,
         \Throwable $error,
         array $context = []
     ): void {
-        // Capture the exception with critical context
-        captureException($error, [
-            'tags' => [
-                'critical.experience' => $experience,
-                'critical.checkpoint' => $checkpoint,
-                'critical.error' => true,
-            ],
-            'contexts' => [
-                'critical_path' => array_merge([
-                    'experience' => $experience,
-                    'checkpoint' => $checkpoint,
-                    'error_type' => get_class($error),
-                ], $context),
-            ],
-        ]);
+        // Set context for the error
+        configureScope(function (\Sentry\State\Scope $scope) use ($experience, $checkpoint, $context) {
+            $scope->setTag('critical.experience', $experience);
+            $scope->setTag('critical.checkpoint', $checkpoint);
+            $scope->setTag('critical.error', 'true');
+            $scope->setContext('critical_path', array_merge([
+                'experience' => $experience,
+                'checkpoint' => $checkpoint,
+            ], $context));
+        });
+        
+        // Capture the exception
+        captureException($error);
     }
 }
