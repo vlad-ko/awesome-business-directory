@@ -1,15 +1,13 @@
 import './bootstrap';
 import './sentry';
-import { initializeSentryFrontend, SentryPerformance, BusinessDirectoryTracking } from './sentry';
+import { BusinessTracking, ModernPerformanceMonitoring } from './sentry';
 import Alpine from 'alpinejs';
 
 // Make Alpine available globally for Sentry integration
 window.Alpine = Alpine;
 
-// Initialize Sentry frontend tracking
-document.addEventListener('DOMContentLoaded', () => {
-    initializeSentryFrontend();
-});
+// Sentry is initialized automatically in sentry.js
+// Additional tracking can be done using BusinessTracking and ModernPerformanceMonitoring
 
 // Welcome Page Component
 Alpine.data('welcomePage', () => ({
@@ -18,10 +16,10 @@ Alpine.data('welcomePage', () => ({
     
     init() {
         try {
-            BusinessDirectoryTracking.trackPageView('welcome');
+            BusinessTracking.trackPageView('welcome');
             this.$watch('demoStep', (step) => {
                 this.progressPercent = (step / 3) * 100;
-                BusinessDirectoryTracking.trackFormProgression('demo_step', step, {
+                BusinessTracking.trackFormProgression('demo_step', step, {
                     progress_percent: this.progressPercent
                 });
             });
@@ -32,7 +30,7 @@ Alpine.data('welcomePage', () => ({
     
     trackCTA(action) {
         try {
-            BusinessDirectoryTracking.trackUserInteraction(action, {
+            BusinessTracking.trackUserInteraction(action, {
                 source: 'welcome_page',
                 position: 'cta'
             });
@@ -56,7 +54,7 @@ Alpine.data('businessDirectory', () => ({
         this.$watch('selectedIndustry', () => this.filterBusinesses());
         
         // Track component initialization
-        BusinessDirectoryTracking.trackSearchInteraction('component_initialized', this.searchTerm);
+        BusinessTracking.trackSearchInteraction('component_initialized', this.searchTerm);
     },
     
     async loadBusinesses() {
@@ -85,11 +83,11 @@ Alpine.data('businessDirectory', () => ({
         });
         
         // Track search interaction
-        BusinessDirectoryTracking.trackSearchInteraction(this.searchTerm, this.filteredBusinesses.length);
+        BusinessTracking.trackSearchInteraction(this.searchTerm, this.filteredBusinesses.length);
     },
     
     viewBusiness(businessId, businessName) {
-        BusinessDirectoryTracking.trackBusinessCardClick(businessId, businessName);
+        BusinessTracking.trackBusinessCardClick(businessId, businessName);
         window.location.href = `/businesses/${businessId}`;
     }
 }));
@@ -131,7 +129,7 @@ Alpine.data('onboardingForm', () => ({
             };
             this.requiredFields = requiredFields;
             
-            BusinessDirectoryTracking.trackFormProgression('onboarding_started', this.currentStep);
+            BusinessTracking.trackFormProgression('onboarding_started', this.currentStep);
         } catch (error) {
             console.error('Onboarding form initialization error:', error);
             this.errors = { general: 'Failed to initialize form' };
@@ -143,8 +141,8 @@ Alpine.data('onboardingForm', () => ({
             if (this.validateCurrentStep()) {
                 if (this.currentStep < this.totalSteps) {
                     this.currentStep++;
-                    BusinessDirectoryTracking.trackFormProgression('step_completed', this.currentStep - 1);
-                    BusinessDirectoryTracking.trackOnboardingProgress(this.currentStep - 1, this.getStepData(this.currentStep - 1));
+                    BusinessTracking.trackFormProgression('step_completed', this.currentStep - 1);
+                    BusinessTracking.trackOnboardingProgress(this.currentStep - 1, this.getStepData(this.currentStep - 1));
                 }
             }
         } catch (error) {
@@ -157,7 +155,7 @@ Alpine.data('onboardingForm', () => ({
         try {
             if (this.currentStep > 1) {
                 this.currentStep--;
-                BusinessDirectoryTracking.trackFormProgression('step_back', this.currentStep);
+                BusinessTracking.trackFormProgression('step_back', this.currentStep);
             }
         } catch (error) {
             console.error('Previous step error:', error);
@@ -212,7 +210,7 @@ Alpine.data('onboardingForm', () => ({
 
     trackCTA(action) {
         try {
-            BusinessDirectoryTracking.trackUserInteraction(action, {
+            BusinessTracking.trackUserInteraction(action, {
                 source: 'welcome_page',
                 position: 'cta'
             });
@@ -224,7 +222,7 @@ Alpine.data('onboardingForm', () => ({
     submitForm() {
         try {
             if (this.validateCurrentStep()) {
-                BusinessDirectoryTracking.trackFormProgression('form_submitted', this.totalSteps);
+                BusinessTracking.trackFormProgression('form_submitted', this.totalSteps);
                 // Form submission logic here
             }
         } catch (error) {
@@ -247,7 +245,7 @@ Alpine.data('adminDashboard', () => ({
     
     init() {
         this.loadDashboardData();
-        BusinessDirectoryTracking.trackPageView('admin_dashboard');
+        BusinessTracking.trackPageView('admin_dashboard');
     },
     
     async loadDashboardData() {
@@ -277,7 +275,7 @@ Alpine.data('adminDashboard', () => ({
             });
             
             await this.loadDashboardData();
-            BusinessDirectoryTracking.trackAdminAction('business_approved', businessId);
+            BusinessTracking.trackAdminAction('business_approved', businessId);
         } catch (error) {
             console.error('Failed to approve business:', error);
         }
@@ -295,7 +293,7 @@ Alpine.data('adminDashboard', () => ({
             });
             
             await this.loadDashboardData();
-            BusinessDirectoryTracking.trackAdminAction('business_rejected', businessId);
+            BusinessTracking.trackAdminAction('business_rejected', businessId);
         } catch (error) {
             console.error('Failed to reject business:', error);
         }
@@ -308,7 +306,7 @@ Alpine.directive('track', (el, { expression }, { evaluate }) => {
     
     el.addEventListener('click', () => {
         if (trackingData.action) {
-            BusinessDirectoryTracking.trackUserInteraction(trackingData.action, trackingData);
+            BusinessTracking.trackUserInteraction(trackingData.action, trackingData);
         }
     });
 });
@@ -325,7 +323,7 @@ Alpine.directive('track-change', (el, { expression }, { evaluate }) => {
     const eventName = evaluate(expression);
     
     el.addEventListener('change', (event) => {
-        BusinessDirectoryTracking.trackFieldInteraction(eventName, event.target.value);
+        BusinessTracking.trackFieldInteraction(eventName, event.target.value);
     });
 });
 
@@ -360,7 +358,7 @@ window.addEventListener('alpine:init', () => {
 Alpine.start();
 
 // Make components available globally for debugging
-window.BusinessDirectoryTracking = BusinessDirectoryTracking;
+window.BusinessTracking = BusinessTracking;
 window.SentryPerformance = SentryPerformance;
 
 // Initialize form tracking on page load
