@@ -5,16 +5,19 @@ namespace App\Services;
 use Psr\Log\LoggerInterface;
 use Sentry\Severity;
 use function Sentry\captureException;
-use function Sentry\captureMessage;
 use function Sentry\configureScope;
 
 /**
- * Modern Sentry Logger following official SDK patterns
+ * Simplified Sentry integration service following SDK best practices
+ * 
+ * This service provides a thin wrapper around Sentry's native functions
+ * to ensure consistent usage across the application
  */
 class SentryLogger
 {
     /**
      * Get the Sentry logger instance
+     * Returns null if Sentry is not configured
      */
     public static function getLogger(): ?LoggerInterface
     {
@@ -23,19 +26,20 @@ class SentryLogger
     }
 
     /**
-     * Log with structured data using Sentry's logger
+     * Send a log message to Sentry
+     * Falls back to Laravel logger if Sentry is not available
      */
     public static function log(string $level, string $message, array $context = []): void
     {
         $logger = self::getLogger();
         
         if (!$logger) {
-            // Fallback to Laravel logging if Sentry is not configured
+            // Fallback to Laravel logger
             \Log::log($level, $message, $context);
             return;
         }
         
-        // Use Sentry's logger with proper severity mapping
+        // Use Sentry's logger
         match ($level) {
             'debug' => $logger->debug($message, $context),
             'info' => $logger->info($message, $context),
@@ -48,147 +52,142 @@ class SentryLogger
     }
 
     /**
-     * Start a span using modern Sentry pattern
+     * Execute a callback within a traced span
+     * Uses Sentry's native trace function for simplicity
      * 
-     * @param array{op: string, name: string} $spanData
-     * @param callable $callback
-     * @return mixed
+     * @param callable $callback Function to execute
+     * @param array $spanData Span configuration (op, name, tags)
+     * @return mixed Result of the callback
      */
-    public static function startSpan(array $spanData, callable $callback): mixed
+    public static function trace(callable $callback, array $spanData = []): mixed
     {
-        $hub = \Sentry\SentrySdk::getCurrentHub();
-        $parent = $hub->getSpan();
+        // If we have an active transaction, create a child span
+        $transaction = \Sentry\SentrySdk::getCurrentHub()->getTransaction();
         
-        if ($parent === null) {
-            // No active transaction, create one
-            $context = new \Sentry\Tracing\TransactionContext();
-            $context->setName($spanData['name'] ?? 'transaction');
-            $context->setOp($spanData['op'] ?? 'default');
+        if ($transaction) {
+            $span = $transaction->startChild(
+                \Sentry\Tracing\SpanContext::make()
+                    ->setOp($spanData['op'] ?? 'function')
+                    ->setDescription($spanData['name'] ?? 'operation')
+            );
             
-            $transaction = $hub->startTransaction($context);
-            $hub->configureScope(function ($scope) use ($transaction) {
-                $scope->setSpan($transaction);
-            });
+            // Set tags on the scope instead of the span
+            if (isset($spanData['tags'])) {
+                configureScope(function (\Sentry\State\Scope $scope) use ($spanData) {
+                    foreach ($spanData['tags'] as $key => $value) {
+                        $scope->setTag($key, $value);
+                    }
+                });
+            }
+            
+            // Set data if provided
+            if (isset($spanData['data'])) {
+                foreach ($spanData['data'] as $key => $value) {
+                    if (method_exists($span, 'setData')) {
+                        $span->setData([$key => $value]);
+                    }
+                }
+            }
             
             try {
-                $result = $callback($transaction);
-                $transaction->finish();
+                $result = $callback($span);
+                $span->setStatus(\Sentry\Tracing\SpanStatus::ok());
+                $span->finish();
                 return $result;
             } catch (\Throwable $e) {
-                $transaction->setStatus(\Sentry\Tracing\SpanStatus::internalError());
-                $transaction->finish();
+                $span->setStatus(\Sentry\Tracing\SpanStatus::internalError());
+                $span->finish();
                 throw $e;
             }
         }
         
-        // Create child span
-        $spanContext = new \Sentry\Tracing\SpanContext();
-        $spanContext->setOp($spanData['op'] ?? 'default');
-        $spanContext->setDescription($spanData['name'] ?? '');
-        
-        $span = $parent->startChild($spanContext);
-        
-        try {
-            $result = $callback($span);
-            $span->finish();
-            return $result;
-        } catch (\Throwable $e) {
-            $span->setStatus(\Sentry\Tracing\SpanStatus::internalError());
-            $span->finish();
-            throw $e;
-        }
+        // No active transaction, just execute the callback
+        return $callback(null);
     }
 
     /**
-     * Track business operation with proper span
+     * Track a critical business operation
+     * Focused on critical experiences only
      */
     public static function trackBusinessOperation(string $operation, array $data, callable $callback): mixed
     {
-        return self::startSpan([
+        return self::trace($callback, [
             'op' => 'business.' . $operation,
             'name' => 'Business Operation: ' . $operation,
-        ], function ($span) use ($data, $callback) {
-            // Set span data
-            if (method_exists($span, 'setData')) {
-                $span->setData($data);
-            }
-            
-            try {
-                $result = $callback($span);
-                $span->setStatus(\Sentry\Tracing\SpanStatus::ok());
-                return $result;
-            } catch (\Throwable $e) {
-                $span->setStatus(\Sentry\Tracing\SpanStatus::internalError());
-                captureException($e);
-                throw $e;
-            }
-        });
+            'tags' => [
+                'business.operation' => $operation,
+            ],
+            'data' => $data,
+        ]);
     }
 
     /**
-     * Track database operation with proper span
+     * Track a database operation
+     * Note: Most DB operations are auto-instrumented by Sentry
+     * Use this only for critical custom queries
      */
     public static function trackDatabaseOperation(string $query, callable $callback): mixed
     {
-        return self::startSpan([
+        return self::trace($callback, [
             'op' => 'db.query',
             'name' => 'Database Query',
-        ], function ($span) use ($query, $callback) {
-            if (method_exists($span, 'setData')) {
-                $span->setData(['db.query' => $query]);
-            }
-            
-            $startTime = microtime(true);
-            try {
-                $result = $callback($span);
-                $duration = (microtime(true) - $startTime) * 1000;
-                
-                if (method_exists($span, 'setData')) {
-                    $span->setData(['duration_ms' => $duration]);
-                }
-                $span->setStatus(\Sentry\Tracing\SpanStatus::ok());
-                
-                // Log slow queries
-                if ($duration > 1000) {
-                    self::log('warning', 'Slow database query detected', [
-                        'query' => $query,
-                        'duration_ms' => $duration,
-                    ]);
-                }
-                
-                return $result;
-            } catch (\Throwable $e) {
-                $span->setStatus(\Sentry\Tracing\SpanStatus::internalError());
-                captureException($e);
-                throw $e;
-            }
+            'data' => ['db.query' => $query],
+        ]);
+    }
+
+    /**
+     * Track an HTTP request
+     * Note: HTTP client requests are auto-instrumented by Sentry
+     * Use this only for critical external API calls
+     */
+    public static function trackHttpRequest(string $url, string $method, callable $callback): mixed
+    {
+        return self::trace($callback, [
+            'op' => 'http.client',
+            'name' => "$method $url",
+            'data' => [
+                'http.url' => $url,
+                'http.method' => $method,
+            ],
+        ]);
+    }
+
+    /**
+     * Add a performance measurement to the current transaction
+     */
+    public static function addMeasurement(string $name, float $value, string $unit = 'none'): void
+    {
+        // Measurements are not directly supported in the current SDK version
+        // We'll add them as custom data on the transaction instead
+        $transaction = \Sentry\SentrySdk::getCurrentHub()->getTransaction();
+        if ($transaction && method_exists($transaction, 'setData')) {
+            $transaction->setData([
+                'measurements.' . $name => [
+                    'value' => $value,
+                    'unit' => $unit
+                ]
+            ]);
+        }
+    }
+
+    /**
+     * Set custom context on the current scope
+     */
+    public static function setContext(string $key, array $context): void
+    {
+        configureScope(function (\Sentry\State\Scope $scope) use ($key, $context) {
+            $scope->setContext($key, $context);
         });
     }
 
     /**
-     * Track HTTP client request with proper span
+     * Set tags on the current scope
      */
-    public static function trackHttpRequest(string $url, string $method, callable $callback): mixed
+    public static function setTags(array $tags): void
     {
-        return self::startSpan([
-            'op' => 'http.client',
-            'name' => "$method $url",
-        ], function ($span) use ($url, $method, $callback) {
-            if (method_exists($span, 'setData')) {
-                $span->setData([
-                    'http.url' => $url,
-                    'http.method' => $method,
-                ]);
-            }
-            
-            try {
-                $result = $callback($span);
-                $span->setStatus(\Sentry\Tracing\SpanStatus::ok());
-                return $result;
-            } catch (\Throwable $e) {
-                $span->setStatus(\Sentry\Tracing\SpanStatus::internalError());
-                captureException($e);
-                throw $e;
+        configureScope(function (\Sentry\State\Scope $scope) use ($tags) {
+            foreach ($tags as $key => $value) {
+                $scope->setTag($key, $value);
             }
         });
     }

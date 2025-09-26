@@ -6,6 +6,7 @@ use App\Models\Business;
 use Illuminate\Http\Request;
 use App\Services\BusinessLogger;
 use App\Services\SentryLogger;
+use App\Services\CriticalExperienceTracker;
 
 class BusinessController extends Controller
 {
@@ -16,21 +17,12 @@ class BusinessController extends Controller
     {
         $searchTerm = $request->get('search');
         
-        // Track if user came from welcome page CTA
-        $referrer = $request->header('referer');
-        $fromWelcomeCta = false;
-        if ($referrer && str_contains($referrer, request()->getSchemeAndHttpHost())) {
-            $path = parse_url($referrer, PHP_URL_PATH);
-            if ($path === '/') {
-                BusinessLogger::welcomeCtaClicked('explore_businesses', $request);
-                $fromWelcomeCta = true;
-            }
-        }
+        // Track critical discovery start
+        CriticalExperienceTracker::trackDiscoveryStart();
 
         // Use modern Sentry pattern for tracking business listing
         return SentryLogger::trackBusinessOperation('listing', [
             'page' => 'index',
-            'from_welcome_cta' => $fromWelcomeCta,
             'search_term' => $searchTerm,
         ], function ($span) use ($request, $searchTerm) {
             $startTime = microtime(true);
@@ -73,22 +65,15 @@ class BusinessController extends Controller
 
             $responseTime = (microtime(true) - $startTime) * 1000;
 
-            // Log listing viewed
-            BusinessLogger::listingViewed($allBusinesses, $responseTime);
-
-            // Log search if performed
-            if ($searchTerm) {
-                BusinessLogger::businessSearched([
-                    'search_term' => $searchTerm,
-                    'search_type' => 'business_name_or_description',
-                ], $businesses->count(), $responseTime);
-            }
-
-            // Check if we should show empty state
-            if ($businesses->isEmpty() && $allBusinesses->isEmpty()) {
-                BusinessLogger::emptyStateShown('no_businesses_at_all');
-            } elseif ($businesses->isEmpty() && $allBusinesses->isNotEmpty()) {
-                BusinessLogger::emptyStateShown($searchTerm ? 'no_search_results' : 'no_approved_businesses');
+            // Only track critical errors for empty states
+            if ($businesses->isEmpty() && $searchTerm) {
+                // This might indicate a problem if users consistently can't find what they're looking for
+                CriticalExperienceTracker::trackCriticalError(
+                    'business_discovery',
+                    'search_no_results',
+                    new \Exception('Search returned no results'),
+                    ['search_term' => $searchTerm]
+                );
             }
 
             // Calculate statistics for view
@@ -111,9 +96,14 @@ class BusinessController extends Controller
                 return $business->city . ', ' . $business->state_province;
             })->map->count();
 
-            // Performance metrics
-            if ($responseTime > 1000) {
-                BusinessLogger::slowQuery('business_listing', $responseTime, 'Multiple queries for business listing page');
+            // Only log critical performance issues
+            if ($responseTime > 3000) {
+                CriticalExperienceTracker::trackCriticalError(
+                    'business_discovery',
+                    'listing_slow',
+                    new \Exception('Listing page load exceeded 3 seconds'),
+                    ['response_time_ms' => $responseTime]
+                );
             }
 
             return response()->view('businesses.index', compact(
@@ -140,27 +130,13 @@ class BusinessController extends Controller
         ], function ($span) use ($business) {
             $startTime = microtime(true);
 
-            // Log business detail access attempt
-            BusinessLogger::userInteraction('business_detail_access_attempt', [
-                'business_id' => $business->id,
-                'business_slug' => $business->business_slug,
-                'business_name' => $business->business_name,
-                'business_status' => $business->status,
-                'request_url' => request()->url(),
-                'user_ip' => request()->ip(),
-            ]);
-
             // Only show approved businesses to the public
             if ($business->status !== 'approved') {
-                BusinessLogger::userInteraction('business_detail_access_denied', [
-                    'business_id' => $business->id,
-                    'business_slug' => $business->business_slug,
-                    'business_status' => $business->status,
-                    'reason' => 'business_not_approved',
-                ]);
-
                 abort(404);
             }
+            
+            // Track critical business view
+            CriticalExperienceTracker::trackBusinessViewed($business);
 
             // Track related businesses query
             $relatedBusinesses = SentryLogger::trackDatabaseOperation('related_businesses_query', function ($dbSpan) use ($business) {
@@ -176,24 +152,15 @@ class BusinessController extends Controller
 
             $responseTime = (microtime(true) - $startTime) * 1000;
 
-            // Log successful business detail view
-            BusinessLogger::userInteraction('business_detail_viewed', [
-                'business_id' => $business->id,
-                'business_slug' => $business->business_slug,
-                'business_name' => $business->business_name,
-                'industry' => $business->industry,
-                'business_type' => $business->business_type,
-                'is_featured' => $business->is_featured,
-                'is_verified' => $business->is_verified,
-                'response_time_ms' => $responseTime,
-                'related_businesses_count' => $relatedBusinesses->count(),
-            ]);
-
-            // Performance tracking
-            BusinessLogger::performanceMetric('business_detail_page', $responseTime, [
-                'business_id' => $business->id,
-                'related_count' => $relatedBusinesses->count(),
-            ]);
+            // Only log critical performance issues
+            if ($responseTime > 3000) {
+                CriticalExperienceTracker::trackCriticalError(
+                    'business_discovery',
+                    'detail_slow',
+                    new \Exception('Business detail page load exceeded 3 seconds'),
+                    ['response_time_ms' => $responseTime, 'business_id' => $business->id]
+                );
+            }
 
             return response()->view('businesses.show', compact('business', 'relatedBusinesses'));
         });

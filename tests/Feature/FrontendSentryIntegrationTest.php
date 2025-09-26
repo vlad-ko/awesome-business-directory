@@ -73,26 +73,25 @@ class FrontendSentryIntegrationTest extends TestCase
     }
 
     #[Test]
-    public function sentry_improvements_file_exists_and_is_valid()
+    public function critical_tracking_file_exists_and_is_valid()
     {
-        $this->assertFileExists(resource_path('js/sentry-improvements.js'));
+        $this->assertFileExists(resource_path('js/critical-tracking.js'));
         
-        $content = file_get_contents(resource_path('js/sentry-improvements.js'));
+        $content = file_get_contents(resource_path('js/critical-tracking.js'));
         
-        // Check for modern patterns
-        $this->assertStringContainsString('browserTracingIntegration', $content);
-        $this->assertStringContainsString('consoleLoggingIntegration', $content);
-        $this->assertStringContainsString('_experiments: {', $content);
-        $this->assertStringContainsString('enableLogs: true', $content);
+        // Check for critical tracking patterns
+        $this->assertStringContainsString('CriticalFrontendTracker', $content);
+        $this->assertStringContainsString('trackDiscoveryStart', $content);
+        $this->assertStringContainsString('trackBusinessViewed', $content);
+        $this->assertStringContainsString('trackOnboardingStart', $content);
         
-        // Check for business tracking functions
-        $this->assertStringContainsString('ModernPerformanceMonitoring', $content);
-        $this->assertStringContainsString('BusinessTracking', $content);
-        $this->assertStringContainsString('WebVitalsTracking', $content);
+        // Check for session management
+        $this->assertStringContainsString('sessionStorage', $content);
+        $this->assertStringContainsString('critical_tracking_session', $content);
         
-        // Check for modern patterns
-        $this->assertStringContainsString('logger.fmt', $content);
-        $this->assertStringContainsString('Sentry.startSpan', $content);
+        // Check for critical error tracking
+        $this->assertStringContainsString('trackCriticalError', $content);
+        $this->assertStringContainsString('Sentry.captureException', $content);
     }
 
     #[Test]

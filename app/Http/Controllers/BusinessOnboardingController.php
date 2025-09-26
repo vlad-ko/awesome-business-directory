@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Business;
 use App\Services\BusinessLogger;
+use App\Services\CriticalExperienceTracker;
+use App\Services\SentryLogger;
 use Illuminate\Support\Facades\Validator;
 use Sentry\SentrySdk;
 use function Sentry\addBreadcrumb;
@@ -57,34 +59,13 @@ class BusinessOnboardingController extends Controller
 
         $startTime = microtime(true);
 
-        // Set experience start time for step 1
-        if ($step === 1 && !session()->has('onboarding_experience_start_time')) {
-            session(['onboarding_experience_start_time' => $startTime]);
+        // Track critical onboarding start for step 1
+        if ($step === 1) {
+            CriticalExperienceTracker::trackOnboardingStart();
         }
-
-        // Log multi-step step started with enhanced context
-        BusinessLogger::multiStepStepStarted($step, [
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'referrer' => $request->header('referer'),
-            'start_time' => $startTime,
-        ]);
-
-        // Start transaction for step viewing
-        $transaction = BusinessLogger::startBusinessTransaction("onboarding_step_{$step}", [
-            'step_number' => $step,
-            'step_title' => self::STEPS[$step]['title'],
-        ]);
 
         // Get existing data for this step (for editing)
         $stepData = session("onboarding_step_{$step}", []);
-
-        // Log step view
-        BusinessLogger::onboardingFormProgress("step_{$step}", [
-            'step_number' => $step,
-            'completion_percentage' => $this->getProgressPercentage($step),
-            'has_existing_data' => !empty($stepData),
-        ]);
 
         $response = response()->view(self::STEPS[$step]['view'], [
             'step' => $step,
@@ -94,15 +75,6 @@ class BusinessOnboardingController extends Controller
             'totalSteps' => count(self::STEPS),
         ]);
 
-        // Track UI performance
-        $renderTime = (microtime(true) - $startTime) * 1000;
-        BusinessLogger::onboardingUiPerformance([
-            'step_number' => $step,
-            'form_render_time_ms' => $renderTime,
-            'has_existing_data' => !empty($stepData),
-        ]);
-
-        $transaction?->finish();
         return $response;
     }
 
@@ -122,89 +94,39 @@ class BusinessOnboardingController extends Controller
                 ->with('error', 'Please complete the previous steps first.');
         }
 
-        $startTime = microtime(true);
-
-        // Start transaction for step submission
-        $transaction = BusinessLogger::startBusinessTransaction("onboarding_step_{$step}_submit", [
+        // Track step submission using SentryLogger
+        return SentryLogger::trackBusinessOperation("onboarding_step_{$step}_submit", [
             'step_number' => $step,
-            'fields_count' => count(self::STEPS[$step]['fields']),
-        ]);
+        ], function ($span) use ($request, $step) {
+            // Validate step data
+            $validator = $this->validateStep($request, $step);
 
-        // Validate step data
-        $validationSpan = BusinessLogger::createBusinessSpan('validation', [
-            'step' => $step,
-            'fields_count' => count(self::STEPS[$step]['fields']),
-        ]);
-
-        $validator = $this->validateStep($request, $step);
-
-        $validationSpan?->finish();
-
-        // Handle validation failures
-        if ($validator->fails()) {
-            $transaction?->setData([
-                'validation_status' => 'failed',
-                'error_count' => count($validator->errors())
-            ]);
-
-            // Log multi-step validation errors
-            BusinessLogger::multiStepValidationError($step, $validator->errors()->toArray(), $request->all());
-
-            // Log validation errors for each field
-            foreach ($validator->errors()->toArray() as $field => $errors) {
-                foreach ($errors as $error) {
-                    $errorType = $this->determineErrorType($error);
-                    BusinessLogger::onboardingValidationError($field, $errorType, [
-                        'step' => $step,
-                        'error_message' => $error,
-                        'field_value_length' => strlen($request->input($field, '')),
-                        'total_errors' => count($validator->errors()),
-                    ]);
-                }
+            // Handle validation failures
+            if ($validator->fails()) {
+                return redirect()->back()
+                    ->withErrors($validator)
+                    ->withInput();
             }
 
-            BusinessLogger::validationFailed($validator->errors()->toArray(), $request);
-            $transaction?->finish();
+            // Store step data in session
+            $validatedData = $validator->validated();
+            session(["onboarding_step_{$step}" => $validatedData]);
+            
+            // Update progress
+            $progress = $this->getProgressPercentage($step);
+            session(['onboarding_progress' => $progress]);
 
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
+            // Track critical step completion
+            CriticalExperienceTracker::trackOnboardingStepComplete($step);
 
-        // Store step data in session
-        $validatedData = $validator->validated();
-        session(["onboarding_step_{$step}" => $validatedData]);
-        
-        // Update progress
-        $progress = $this->getProgressPercentage($step);
-        session(['onboarding_progress' => $progress]);
-
-        // Log successful step completion
-        $processingTime = (microtime(true) - $startTime) * 1000;
-        
-        // Log multi-step step completion
-        BusinessLogger::multiStepStepCompleted($step, $validatedData, $processingTime);
-        
-        BusinessLogger::onboardingFormProgress("step_{$step}_completed", [
-            'step_number' => $step,
-            'completion_percentage' => $progress,
-            'processing_time_ms' => $processingTime,
-            'fields_completed' => count($validatedData),
-        ]);
-
-        $transaction?->setData([
-            'validation_status' => 'passed',
-            'processing_time_ms' => round($processingTime, 2)
-        ]);
-        $transaction?->finish();
-
-        // Determine next step
-        $nextStep = $step + 1;
-        if ($nextStep <= count(self::STEPS)) {
-            return redirect()->route('business.onboard.step', $nextStep);
-        } else {
-            return redirect()->route('business.onboard.review');
-        }
+            // Determine next step
+            $nextStep = $step + 1;
+            if ($nextStep <= count(self::STEPS)) {
+                return redirect()->route('business.onboard.step', $nextStep);
+            } else {
+                return redirect()->route('business.onboard.review');
+            }
+        });
     }
 
     /**

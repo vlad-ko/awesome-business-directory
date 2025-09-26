@@ -1,13 +1,10 @@
 import './bootstrap';
 import './sentry';
-import { BusinessTracking, ModernPerformanceMonitoring } from './sentry';
+import { CriticalFrontendTracker } from './critical-tracking';
 import Alpine from 'alpinejs';
 
 // Make Alpine available globally for Sentry integration
 window.Alpine = Alpine;
-
-// Sentry is initialized automatically in sentry.js
-// Additional tracking can be done using BusinessTracking and ModernPerformanceMonitoring
 
 // Welcome Page Component
 Alpine.data('welcomePage', () => ({
@@ -15,27 +12,16 @@ Alpine.data('welcomePage', () => ({
     progressPercent: 0,
     
     init() {
-        try {
-            BusinessTracking.trackPageView('welcome');
-            this.$watch('demoStep', (step) => {
-                this.progressPercent = (step / 3) * 100;
-                BusinessTracking.trackFormProgression('demo_step', step, {
-                    progress_percent: this.progressPercent
-                });
-            });
-        } catch (error) {
-            console.error('Welcome page initialization error:', error);
-        }
+        // No tracking needed for welcome page - not a critical path
+        this.$watch('demoStep', (step) => {
+            this.progressPercent = (step / 3) * 100;
+        });
     },
     
     trackCTA(action) {
-        try {
-            BusinessTracking.trackUserInteraction(action, {
-                source: 'welcome_page',
-                position: 'cta'
-            });
-        } catch (error) {
-            console.error('CTA tracking error:', error);
+        // Only track if it leads to a critical path
+        if (action === 'browse_businesses') {
+            CriticalFrontendTracker.trackDiscoveryStart();
         }
     }
 }));
@@ -52,9 +38,6 @@ Alpine.data('businessDirectory', () => ({
         this.loadBusinesses();
         this.$watch('searchTerm', () => this.filterBusinesses());
         this.$watch('selectedIndustry', () => this.filterBusinesses());
-        
-        // Track component initialization
-        BusinessTracking.trackSearchInteraction('component_initialized', this.searchTerm);
     },
     
     async loadBusinesses() {
@@ -64,7 +47,12 @@ Alpine.data('businessDirectory', () => ({
             this.businesses = await response.json();
             this.filteredBusinesses = [...this.businesses];
         } catch (error) {
-            console.error('Failed to load businesses:', error);
+            // Only track if it blocks the critical path
+            CriticalFrontendTracker.trackCriticalError(
+                'business_discovery',
+                'listing_load_failed',
+                error
+            );
         } finally {
             this.isLoading = false;
         }
@@ -81,13 +69,11 @@ Alpine.data('businessDirectory', () => ({
             
             return matchesSearch && matchesIndustry;
         });
-        
-        // Track search interaction
-        BusinessTracking.trackSearchInteraction(this.searchTerm, this.filteredBusinesses.length);
     },
     
     viewBusiness(businessId, businessName) {
-        BusinessTracking.trackBusinessCardClick(businessId, businessName);
+        // Track critical conversion point
+        CriticalFrontendTracker.trackBusinessViewed(businessId, businessName);
         window.location.href = `/businesses/${businessId}`;
     }
 }));
@@ -129,9 +115,9 @@ Alpine.data('onboardingForm', () => ({
             };
             this.requiredFields = requiredFields;
             
-            BusinessTracking.trackFormProgression('onboarding_started', this.currentStep);
+            // Track critical onboarding start
+            CriticalFrontendTracker.trackOnboardingStart();
         } catch (error) {
-            console.error('Onboarding form initialization error:', error);
             this.errors = { general: 'Failed to initialize form' };
         }
     },
@@ -140,25 +126,24 @@ Alpine.data('onboardingForm', () => ({
         try {
             if (this.validateCurrentStep()) {
                 if (this.currentStep < this.totalSteps) {
+                    // Track critical step completion
+                    CriticalFrontendTracker.trackOnboardingStepComplete(this.currentStep);
                     this.currentStep++;
-                    BusinessTracking.trackFormProgression('step_completed', this.currentStep - 1);
-                    BusinessTracking.trackOnboardingProgress(this.currentStep - 1, this.getStepData(this.currentStep - 1));
                 }
             }
         } catch (error) {
-            console.error('Next step error:', error);
+            CriticalFrontendTracker.trackCriticalError(
+                'business_onboarding',
+                'step_progression_failed',
+                error
+            );
             this.errors = { general: 'Failed to proceed to next step' };
         }
     },
 
     prevStep() {
-        try {
-            if (this.currentStep > 1) {
-                this.currentStep--;
-                BusinessTracking.trackFormProgression('step_back', this.currentStep);
-            }
-        } catch (error) {
-            console.error('Previous step error:', error);
+        if (this.currentStep > 1) {
+            this.currentStep--;
         }
     },
 
@@ -178,7 +163,6 @@ Alpine.data('onboardingForm', () => ({
 
             return isValid;
         } catch (error) {
-            console.error('Validation error:', error);
             this.errors = { general: 'Validation failed' };
             return false;
         }
@@ -208,27 +192,27 @@ Alpine.data('onboardingForm', () => ({
         return this[`step${step}`] || {};
     },
 
-    trackCTA(action) {
-        try {
-            BusinessTracking.trackUserInteraction(action, {
-                source: 'welcome_page',
-                position: 'cta'
-            });
-        } catch (error) {
-            console.error('CTA tracking error:', error);
-        }
-    },
-
     submitForm() {
         try {
             if (this.validateCurrentStep()) {
-                BusinessTracking.trackFormProgression('form_submitted', this.totalSteps);
+                // Track critical onboarding completion
+                // Note: Business ID would come from server response
+                CriticalFrontendTracker.trackOnboardingComplete('pending');
                 // Form submission logic here
             }
         } catch (error) {
-            console.error('Form submission error:', error);
+            CriticalFrontendTracker.trackCriticalError(
+                'business_onboarding',
+                'submission_failed',
+                error
+            );
             this.errors = { general: 'Failed to submit form' };
         }
+    },
+
+    abandonForm() {
+        // Track critical abandonment
+        CriticalFrontendTracker.trackOnboardingAbandoned(this.currentStep);
     }
 }));
 
@@ -245,7 +229,6 @@ Alpine.data('adminDashboard', () => ({
     
     init() {
         this.loadDashboardData();
-        BusinessTracking.trackPageView('admin_dashboard');
     },
     
     async loadDashboardData() {
@@ -259,6 +242,7 @@ Alpine.data('adminDashboard', () => ({
             this.businesses = await businessesResponse.json();
             this.stats = await statsResponse.json();
         } catch (error) {
+            // Only track if it blocks critical admin actions
             console.error('Failed to load dashboard data:', error);
         } finally {
             this.isLoading = false;
@@ -275,9 +259,13 @@ Alpine.data('adminDashboard', () => ({
             });
             
             await this.loadDashboardData();
-            BusinessTracking.trackAdminAction('business_approved', businessId);
+            // Critical admin actions are tracked on backend
         } catch (error) {
-            console.error('Failed to approve business:', error);
+            CriticalFrontendTracker.trackCriticalError(
+                'admin_operations',
+                'approval_failed',
+                error
+            );
         }
     },
     
@@ -293,39 +281,46 @@ Alpine.data('adminDashboard', () => ({
             });
             
             await this.loadDashboardData();
-            BusinessTracking.trackAdminAction('business_rejected', businessId);
+            // Critical admin actions are tracked on backend
         } catch (error) {
-            console.error('Failed to reject business:', error);
+            CriticalFrontendTracker.trackCriticalError(
+                'admin_operations',
+                'rejection_failed',
+                error
+            );
         }
     }
 }));
 
-// Alpine.js tracking directive
-Alpine.directive('track', (el, { expression }, { evaluate }) => {
-    const trackingData = evaluate(expression);
+// Business Detail Component for contact tracking
+Alpine.data('businessDetail', () => ({
+    business: null,
     
-    el.addEventListener('click', () => {
-        if (trackingData.action) {
-            BusinessTracking.trackUserInteraction(trackingData.action, trackingData);
+    init() {
+        // Business data would be passed from server
+        this.business = window.businessData || null;
+    },
+    
+    contactBusiness(method) {
+        if (this.business) {
+            // Track critical conversion
+            CriticalFrontendTracker.trackBusinessContact(this.business.id, method);
+            
+            // Handle the actual contact action
+            switch(method) {
+                case 'website':
+                    window.open(this.business.website_url, '_blank');
+                    break;
+                case 'phone':
+                    window.location.href = `tel:${this.business.phone_number}`;
+                    break;
+                case 'email':
+                    window.location.href = `mailto:${this.business.primary_email}`;
+                    break;
+            }
         }
-    });
-});
-
-// Alpine.js form tracking directive
-Alpine.directive('track-form', (el, { expression }, { evaluate }) => {
-    const formName = evaluate(expression);
-    
-    SentryPerformance.trackFormMetrics(el, formName);
-});
-
-// Alpine.js change tracking directive
-Alpine.directive('track-change', (el, { expression }, { evaluate }) => {
-    const eventName = evaluate(expression);
-    
-    el.addEventListener('change', (event) => {
-        BusinessTracking.trackFieldInteraction(eventName, event.target.value);
-    });
-});
+    }
+}));
 
 // Global error handler for Alpine.js
 window.addEventListener('alpine:init', () => {
@@ -354,31 +349,22 @@ window.addEventListener('alpine:init', () => {
     });
 });
 
-// Start Alpine.js
-Alpine.start();
-
-// Make components available globally for debugging
-window.BusinessTracking = BusinessTracking;
-window.SentryPerformance = SentryPerformance;
-
-// Initialize form tracking on page load
-document.addEventListener('DOMContentLoaded', function() {
-    // Track forms with comprehensive metrics
-    const forms = document.querySelectorAll('form');
-    forms.forEach(form => {
-        const formName = form.getAttribute('data-form') || form.id || 'unknown';
-        SentryPerformance.trackFormMetrics(form, formName);
-    });
-});
-
-// Enhanced error handling
-window.addEventListener('error', (event) => {
-    try {
-        console.error('Global error:', event.error);
-    } catch (error) {
-        console.warn('Error in global error handler:', error);
+// Handle page unload for onboarding abandonment
+window.addEventListener('beforeunload', (event) => {
+    // Check if we're on an onboarding page and haven't completed
+    const onboardingForm = document.querySelector('[x-data*="onboardingForm"]');
+    if (onboardingForm && window.Alpine) {
+        const component = Alpine.$data(onboardingForm);
+        if (component && component.currentStep < component.totalSteps) {
+            component.abandonForm();
+        }
     }
 });
 
-// Initialize comprehensive tracking
-console.log('Alpine.js and Sentry integration initialized');
+// Start Alpine.js
+Alpine.start();
+
+// Make critical tracker available for debugging
+window.CriticalFrontendTracker = CriticalFrontendTracker;
+
+console.log('Alpine.js with Critical Experience tracking initialized');
