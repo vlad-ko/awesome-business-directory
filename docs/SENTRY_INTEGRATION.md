@@ -236,10 +236,41 @@ This isn't just monitoring - it's **business intelligence** that directly impact
 
 ---
 
+## ⏰ Automated Traffic Simulation
+
+The system automatically generates realistic traffic data for Sentry visualization:
+
+**Hourly Simulation** (24/7):
+- 50 discovery visitors + 20 onboarding users
+- Realistic conversion rates and drop-offs
+- Logs to: `storage/logs/simulation.log`
+
+**Business Hours Boost** (9 AM - 5 PM, weekdays):
+- Additional 20 discovery visitors every 15 minutes
+- Simulates higher daytime traffic
+
+**Manual Override:**
+```bash
+# Run simulation manually anytime
+./vendor/bin/sail artisan simulate:all --realistic
+
+# Custom parameters
+./vendor/bin/sail artisan simulate:discovery --count=100 --view-rate=0.6 --contact-rate=0.3
+```
+
+**To Start the Scheduler:**
+```bash
+# In production, add to crontab:
+* * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
+
+# For development with Sail:
+./vendor/bin/sail artisan schedule:work
+```
+
 ## 📚 Quick Reference
 
-**Generate data:** `./vendor/bin/sail artisan simulate:all --realistic`  
 **Query discovery:** `span.op:critical.discovery.*`  
 **Query onboarding:** `span.op:critical.onboarding.*`  
 **Create funnel:** Group by `span.op`, visualize `count()`  
-**Find conversions:** `span.op:*.conversion`
+**Find conversions:** `span.op:*.conversion`  
+**Monitor scheduler:** `./vendor/bin/sail artisan schedule:list`

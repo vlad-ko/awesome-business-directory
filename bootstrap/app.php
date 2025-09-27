@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Console\Scheduling\Schedule;
 use Sentry\Laravel\Integration;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -28,6 +29,22 @@ return Application::configure(basePath: dirname(__DIR__))
             }
             return route('login'); // Default login route (if we had one)
         });
+    })
+    ->withSchedule(function (Schedule $schedule): void {
+        // Run realistic traffic simulation every hour
+        $schedule->command('simulate:all --realistic --discovery-count=50 --onboarding-count=20')
+            ->hourly()
+            ->withoutOverlapping()
+            ->runInBackground()
+            ->appendOutputTo(storage_path('logs/simulation.log'));
+            
+        // Optional: Run smaller simulation every 15 minutes during business hours
+        $schedule->command('simulate:discovery --count=20 --view-rate=0.5 --contact-rate=0.2')
+            ->everyFifteenMinutes()
+            ->between('9:00', '17:00')
+            ->weekdays()
+            ->withoutOverlapping()
+            ->runInBackground();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         Integration::handles($exceptions);
